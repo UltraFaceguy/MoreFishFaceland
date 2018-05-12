@@ -1,6 +1,6 @@
 package me.elsiff.morefish.listener;
 
-import me.elsiff.morefish.CaughtFish;
+import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
 import me.elsiff.morefish.manager.ContestManager;
@@ -72,20 +72,21 @@ public class FishingListener implements Listener {
         }
 
         boolean new1st = contest.hasStarted() && contest.isNew1st(fish);
-        announceMessages(catcher, fish, new1st);
 
         if (fish.getRarity().hasFirework())
             launchFirework(catcher.getLocation().add(0, 1, 0));
         if (!fish.getCommands().isEmpty())
             executeCommands(catcher, fish);
 
-        if (new1st) {
+        if (contest.hasStarted()) {
             contest.addRecord(catcher, fish);
         }
 
         ItemStack itemStack = plugin.getFishManager().getItemStack(fish, event.getPlayer().getName());
         Item caught = (Item) event.getCaught();
         caught.setItemStack(itemStack);
+
+        announceMessages(catcher, fish, new1st);
     }
 
     private void announceMessages(Player catcher, CaughtFish fish, boolean new1st) {
@@ -94,10 +95,12 @@ public class FishingListener implements Listener {
         int ancFish = plugin.getConfig().getInt("messages.announce-catch");
         int ancContest = plugin.getConfig().getInt("messages.announce-new-1st");
 
-        if (fish.getRarity().isNoBroadcast())
+        if (fish.getRarity().isNoBroadcast()) {
             ancFish = 0;
-        if (new1st)
+        }
+        if (new1st) {
             ancFish = ancContest;
+        }
 
         getMessageReceivers(ancFish, catcher)
                 .forEach(player -> player.sendMessage(msgFish));
@@ -127,11 +130,10 @@ public class FishingListener implements Listener {
         Set<Player> players = new HashSet<>();
 
         switch (announceValue) {
+            case 0:
+                break;
             case -1:
                 players.addAll(plugin.getServer().getOnlinePlayers());
-                break;
-            case 0:
-                players.add(catcher);
                 break;
             default:
                 Location loc = catcher.getLocation();

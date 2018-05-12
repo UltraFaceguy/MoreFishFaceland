@@ -25,7 +25,7 @@ public class RewardsGUI implements Listener {
 
     public void openGUI(Player player) {
         String title = plugin.getLocale().getString("rewards-gui-title");
-        Inventory inv = plugin.getServer().createInventory(player, (plugin.hasEconomy() ? 18 : 9), title);
+        Inventory inv = plugin.getServer().createInventory(player, (plugin.hasEconomy() ? 27 : 18), title);
 
         ItemStack[] rewards = plugin.getContestManager().getRewards();
 
@@ -39,6 +39,28 @@ public class RewardsGUI implements Listener {
                 .build();
 
         inv.setItem(8, iconGuide);
+
+        String[] cmdPrizes = plugin.getContestManager().getCmdRewards();
+
+        for (int i = 0; i < 8 && i < cmdPrizes.length; i ++) {
+            String ordinal = plugin.getOrdinal(i + 1);
+            String number = Integer.toString(i + 1);
+
+            ItemStack iconCommand = new ItemBuilder(Material.COMMAND)
+                .setDisplayName(plugin.getLocale().getString("rewards-cmd-icon-name")
+                    .replaceAll("%ordinal%", ordinal)
+                    .replaceAll("%number%", number))
+                .setLore(plugin.getLocale().getStringList("rewards-cmd-icon-lore"))
+                .build();
+            inv.setItem(9 + i, iconCommand);
+        }
+
+        ItemStack iconCmdGuide = new ItemBuilder(Material.SIGN)
+            .setDisplayName(plugin.getLocale().getString("rewards-sign-icon-name"))
+            .setLore(plugin.getLocale().getStringList("rewards-sign-icon-lore"))
+            .build();
+
+        inv.setItem(17, iconCmdGuide);
 
         if (plugin.hasEconomy()) {
             double[] cashPrizes = plugin.getContestManager().getCashPrizes();
@@ -63,7 +85,7 @@ public class RewardsGUI implements Listener {
                         .setLore(plugin.getLocale().getStringList("rewards-emerald-icon-lore"))
                         .build();
 
-                inv.setItem(9 + i, iconEmerald);
+                inv.setItem(18 + i, iconEmerald);
             }
 
             ItemStack iconMoneyGuide = new ItemBuilder(Material.SIGN)
@@ -71,7 +93,7 @@ public class RewardsGUI implements Listener {
                     .setLore(plugin.getLocale().getStringList("rewards-sign-icon-lore"))
                     .build();
 
-            inv.setItem(17, iconMoneyGuide);
+            inv.setItem(26, iconMoneyGuide);
         }
 
         player.openInventory(inv);
@@ -87,7 +109,17 @@ public class RewardsGUI implements Listener {
 
             event.setCancelled(true);
 
-            if (9 <= event.getRawSlot() && event.getRawSlot() <= 16 && plugin.hasEconomy()) {
+            if (9 <= event.getRawSlot() && event.getRawSlot() <= 16) {
+                editors.put(event.getWhoClicked().getUniqueId(), event.getRawSlot() - 9);
+
+                event.getWhoClicked().closeInventory();
+
+                for (String msg : plugin.getLocale().getStringList("enter-cmd-prize")) {
+                    event.getWhoClicked().sendMessage(msg);
+                }
+            }
+
+            if (18 <= event.getRawSlot() && event.getRawSlot() <= 25 && plugin.hasEconomy()) {
                 editors.put(event.getWhoClicked().getUniqueId(), event.getRawSlot() - 9);
 
                 event.getWhoClicked().closeInventory();
@@ -114,25 +146,30 @@ public class RewardsGUI implements Listener {
                 return;
             }
 
-            double value;
-            try {
-                value = Double.parseDouble(event.getMessage());
-            } catch (NumberFormatException ex) {
-                event.getPlayer().sendMessage(String.format(plugin.getLocale().getString("entered-not-number"), event.getMessage()));
-                return;
-            }
-
-            if (value < 0) {
-                event.getPlayer().sendMessage(plugin.getLocale().getString("entered-not-positive"));
-                return;
-            }
-
             int index = editors.get(id);
 
-            double[] cashPrizes = plugin.getContestManager().getCashPrizes();
-            cashPrizes[index] = value;
-            plugin.getContestManager().setCashPrizes(cashPrizes);
+            if (index >= 18 && index <= 26) {
+                double value;
+                try {
+                    value = Double.parseDouble(event.getMessage());
+                } catch (NumberFormatException ex) {
+                    event.getPlayer().sendMessage(
+                        String.format(plugin.getLocale().getString("entered-not-number"), event.getMessage()));
+                    return;
+                }
 
+                if (value < 0) {
+                    event.getPlayer().sendMessage(plugin.getLocale().getString("entered-not-positive"));
+                    return;
+                }
+                double[] cashPrizes = plugin.getContestManager().getCashPrizes();
+                cashPrizes[index] = value;
+                plugin.getContestManager().setCashPrizes(cashPrizes);
+            } else {
+                String[] cmdPrizes = plugin.getContestManager().getCmdRewards();
+                cmdPrizes[index] = event.getMessage();
+                plugin.getContestManager().setCmdRewards(cmdPrizes);
+            }
             editors.remove(id);
             openGUI(event.getPlayer());
 

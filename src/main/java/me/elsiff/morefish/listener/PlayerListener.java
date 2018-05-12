@@ -1,7 +1,7 @@
 package me.elsiff.morefish.listener;
 
-import me.elsiff.morefish.CaughtFish;
-import me.elsiff.morefish.CustomFish;
+import me.elsiff.morefish.pojo.CaughtFish;
+import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.MoreFish;
 import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;

@@ -1,9 +1,9 @@
 package me.elsiff.morefish.manager;
 
-import me.elsiff.morefish.CaughtFish;
-import me.elsiff.morefish.CustomFish;
+import me.elsiff.morefish.pojo.CaughtFish;
+import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.MoreFish;
-import me.elsiff.morefish.Rarity;
+import me.elsiff.morefish.pojo.Rarity;
 import me.elsiff.morefish.condition.*;
 import me.elsiff.morefish.util.IdentityUtils;
 import me.elsiff.morefish.util.SkullUtils;
@@ -242,11 +242,6 @@ public class FishManager {
                 int minHeight = Integer.parseInt(values[1]);
                 int maxHeight = Integer.parseInt(values[2]);
                 condition = new HeightCondition(minHeight, maxHeight);
-                break;
-            case "mcmmo_skill":
-                String skillType = values[1];
-                level = Integer.parseInt(values[2]);
-                condition = new MCMMOSkillCondition(skillType, level);
                 break;
             case "worldguard_region":
                 String regionId = values[1];

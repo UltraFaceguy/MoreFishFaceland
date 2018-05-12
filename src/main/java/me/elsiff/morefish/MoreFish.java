@@ -6,6 +6,7 @@ import me.elsiff.morefish.listener.*;
 import me.elsiff.morefish.manager.BossBarManager;
 import me.elsiff.morefish.manager.ContestManager;
 import me.elsiff.morefish.manager.FishManager;
+import me.elsiff.morefish.pojo.Locale;
 import me.elsiff.morefish.protocol.UpdateChecker;
 import org.bukkit.Material;
 import org.bukkit.command.ConsoleCommandSender;
@@ -32,7 +33,6 @@ public class MoreFish extends JavaPlugin {
     private VaultHooker vaultHooker;
     private CitizensHooker citizensHooker;
     private PlaceholderAPIHooker placeholderAPIHooker;
-    private MCMMOHooker mcmmoHooker;
     private WorldGuardHooker worldGuardHooker;
 
     public static void setInstance(MoreFish moreFish) {
@@ -88,11 +88,6 @@ public class MoreFish extends JavaPlugin {
         if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI").isEnabled()) {
             placeholderAPIHooker = new PlaceholderAPIHooker(this);
             getLogger().info("Found PlaceholderAPI for placeholders support.");
-        }
-
-        if (manager.getPlugin("mcMMO") != null && manager.getPlugin("mcMMO").isEnabled()) {
-            mcmmoHooker = new MCMMOHooker();
-            getLogger().info("Found mcMMO for MCMMO support.");
         }
 
         if (manager.getPlugin("WorldGuard") != null && manager.getPlugin("WorldGuard").isEnabled()) {
@@ -254,10 +249,6 @@ public class MoreFish extends JavaPlugin {
 
     public PlaceholderAPIHooker getPlaceholderAPIHooker() {
         return placeholderAPIHooker;
-    }
-
-    public MCMMOHooker getMCMMOHooker() {
-        return mcmmoHooker;
     }
 
     public WorldGuardHooker getWorldGuardHooker() {
