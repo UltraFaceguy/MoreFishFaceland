@@ -1,6 +1,6 @@
 package me.elsiff.morefish.event;
 
-import me.elsiff.morefish.CaughtFish;
+import me.elsiff.morefish.pojo.CaughtFish;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;

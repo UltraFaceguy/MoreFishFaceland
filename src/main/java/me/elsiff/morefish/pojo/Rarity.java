@@ -1,4 +1,4 @@
-package me.elsiff.morefish;
+package me.elsiff.morefish.pojo;
 
 import org.bukkit.ChatColor;
 

@@ -1,6 +1,6 @@
 package me.elsiff.morefish.manager;
 
-import me.elsiff.morefish.CaughtFish;
+import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -16,6 +16,7 @@ import java.util.*;
 
 public class ContestManager {
     private static final String PREFIX_REWARD = "reward_";
+    private static final String PREFIX_CMD_REWARD = "cmd_";
     private static final String PREFIX_CASH_PRIZE = "cash-prize_";
     private final MoreFish plugin;
     private final RecordComparator comparator = new RecordComparator();
@@ -187,6 +188,20 @@ public class ContestManager {
             }
         }
 
+        String[] cmdRewards = getCmdRewards();
+        for (int i = 0; i < cmdRewards.length - 1 && i < recordList.size(); i++) {
+            String command = cmdRewards[i];
+
+            if (command == null)
+                continue;
+
+            OfflinePlayer player = getRecord(i + 1).getPlayer();
+            String str = command.replaceAll("@p", player.getName());
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), str);
+
+            receivers.add(i);
+        }
+
         if (rewards[7] != null) {
             for (int i = 0; i < getRecordAmount(); i++) {
                 if (receivers.contains(i))
@@ -273,6 +288,30 @@ public class ContestManager {
         saveRewards();
     }
 
+    public String[] getCmdRewards() {
+        String[] rewards = new String[8];
+
+        for (String path : configRewards.getKeys(false)) {
+            if (!path.startsWith(PREFIX_CMD_REWARD))
+                continue;
+
+            int i = Integer.parseInt(path.substring(4));
+            String cmd = configRewards.getString("cmd_" + i);
+
+            rewards[i] = cmd;
+        }
+
+        return rewards;
+    }
+
+    public void setCmdRewards(String[] rewards) {
+        for (int i = 0; i < rewards.length; i++) {
+            configRewards.set(PREFIX_CMD_REWARD + i, rewards[i]);
+        }
+
+        saveRewards();
+    }
+
     public double[] getCashPrizes() {
         double[] arr = new double[8];
 
@@ -304,21 +343,22 @@ public class ContestManager {
     }
 
     public void addRecord(OfflinePlayer player, CaughtFish fish) {
-        ListIterator<Record> it = recordList.listIterator();
-        while (it.hasNext()) {
-            Record record = it.next();
-
-            if (record.getPlayer().equals(player)) {
-                if (record.getLength() < fish.getLength()) {
-                    it.remove();
-                    break;
-                } else {
-                    return;
+        boolean newRecord = false;
+        boolean containsRecord = false;
+        for (Record r : recordList) {
+            if (r.getPlayer() == player) {
+                containsRecord = true;
+                if (fish.getLength() > r.getLength()) {
+                    newRecord = true;
                 }
+                break;
             }
         }
-
-        recordList.add(new Record(player.getUniqueId(), fish));
+        if (!containsRecord) {
+            recordList.add(new Record(player.getUniqueId(), fish));
+        } else if (newRecord) {
+            recordList.add(new Record(player.getUniqueId(), fish));
+        }
 
         Collections.sort(recordList, comparator);
     }

@@ -1,7 +1,7 @@
 package me.elsiff.morefish.listener;
 
 import com.google.common.math.DoubleMath;
-import me.elsiff.morefish.CaughtFish;
+import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.util.ItemBuilder;
 import org.bukkit.Material;

@@ -1,5 +1,6 @@
-package me.elsiff.morefish;
+package me.elsiff.morefish.pojo;
 
+import me.elsiff.morefish.MoreFish;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;

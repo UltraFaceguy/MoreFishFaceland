@@ -1,4 +1,4 @@
-package me.elsiff.morefish;
+package me.elsiff.morefish.pojo;
 
 import me.elsiff.morefish.condition.Condition;
 import org.bukkit.inventory.ItemStack;
