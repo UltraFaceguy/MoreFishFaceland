@@ -97,6 +97,7 @@ public class FishManager {
         String displayName = section.getString(path + ".display-name");
         double lengthMin = section.getDouble(path + ".length-min");
         double lengthMax = section.getDouble(path + ".length-max");
+        double fishingExp = section.getDouble(path + ".fish-exp", 0);
         ItemStack icon = getIcon(section, path);
         boolean skipItemFormat = (section.contains(path + ".skip-item-format") &&
                 section.getBoolean(path + ".skip-item-format"));
@@ -135,7 +136,7 @@ public class FishManager {
         }
 
         return new CustomFish(path, displayName, lengthMin, lengthMax, icon, skipItemFormat,
-                commands, foodEffects, conditions, rarity);
+                commands, foodEffects, conditions, rarity, fishingExp);
     }
 
     private ItemStack getIcon(ConfigurationSection section, String path) {

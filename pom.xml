@@ -16,10 +16,6 @@
 
     <repositories>
         <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-        </repository>
-        <repository>
             <id>vault-repo</id>
             <url>http://nexus.hc.to/content/repositories/pub_releases</url>
         </repository>
@@ -43,10 +39,14 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot</artifactId>
-            <version>1.12-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
+            <groupId>io.pixeloutlaw</groupId>
+            <artifactId>facecore</artifactId>
+            <version>3.0.3-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.pixeloutlaw</groupId>
+            <artifactId>strife</artifactId>
+            <version>1.0.5-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>net.milkbowl.vault</groupId>
