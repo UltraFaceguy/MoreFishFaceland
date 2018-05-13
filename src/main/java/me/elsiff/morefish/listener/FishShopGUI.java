@@ -27,7 +27,7 @@ public class FishShopGUI implements Listener {
     }
 
     public void openGUI(Player player) {
-        String title = plugin.getLocale().getString("shop-gui-title");
+        String title = plugin.getFishConfiguration().getString("shop-gui-title");
         Inventory inv = plugin.getServer().createInventory(player, 36, title);
 
         ItemStack iconGlass = new ItemBuilder(Material.STAINED_GLASS_PANE, 1, (short) 3).setDisplayName("§r").build();
@@ -46,7 +46,7 @@ public class FishShopGUI implements Listener {
 
         double price = getTotalPrice(inv);
         String priceStr = getPriceString(price);
-        displayName = plugin.getLocale().getString("shop-emerald-icon-name")
+        displayName = plugin.getFishConfiguration().getString("shop-emerald-icon-name")
                 .replaceAll("%price%", priceStr);
 
         ItemStack iconEmerald = new ItemBuilder(Material.EMERALD)
@@ -117,14 +117,14 @@ public class FishShopGUI implements Listener {
                     }
 
                     if (!sold) {
-                        player.sendMessage(plugin.getLocale().getString("shop-no-fish"));
+                        player.sendMessage(plugin.getFishConfiguration().getString("shop-no-fish"));
                         return;
                     }
 
                     plugin.getVaultHooker().getEconomy().depositPlayer(player, price);
 
                     String priceStr = getPriceString(price);
-                    player.sendMessage(plugin.getLocale().getString("shop-sold")
+                    player.sendMessage(plugin.getFishConfiguration().getString("shop-sold")
                             .replaceAll("%price%", priceStr + ""));
                 }
             }

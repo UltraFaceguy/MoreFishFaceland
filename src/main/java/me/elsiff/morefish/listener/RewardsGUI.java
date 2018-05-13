@@ -24,7 +24,7 @@ public class RewardsGUI implements Listener {
     }
 
     public void openGUI(Player player) {
-        String title = plugin.getLocale().getString("rewards-gui-title");
+        String title = plugin.getFishConfiguration().getString("rewards-gui-title");
         Inventory inv = plugin.getServer().createInventory(player, (plugin.hasEconomy() ? 27 : 18), title);
 
         ItemStack[] rewards = plugin.getContestManager().getRewards();
@@ -34,8 +34,8 @@ public class RewardsGUI implements Listener {
         }
 
         ItemStack iconGuide = new ItemBuilder(Material.SIGN)
-                .setDisplayName(plugin.getLocale().getString("rewards-guide-icon-name"))
-                .setLore(plugin.getLocale().getStringList("rewards-guide-icon-lore"))
+                .setDisplayName(plugin.getFishConfiguration().getString("rewards-guide-icon-name"))
+                .setLore(plugin.getFishConfiguration().getStringList("rewards-guide-icon-lore"))
                 .build();
 
         inv.setItem(8, iconGuide);
@@ -47,17 +47,17 @@ public class RewardsGUI implements Listener {
             String number = Integer.toString(i + 1);
 
             ItemStack iconCommand = new ItemBuilder(Material.COMMAND)
-                .setDisplayName(plugin.getLocale().getString("rewards-cmd-icon-name")
+                .setDisplayName(plugin.getFishConfiguration().getString("rewards-cmd-icon-name")
                     .replaceAll("%ordinal%", ordinal)
                     .replaceAll("%number%", number))
-                .setLore(plugin.getLocale().getStringList("rewards-cmd-icon-lore"))
+                .setLore(plugin.getFishConfiguration().getStringList("rewards-cmd-icon-lore"))
                 .build();
             inv.setItem(9 + i, iconCommand);
         }
 
         ItemStack iconCmdGuide = new ItemBuilder(Material.SIGN)
-            .setDisplayName(plugin.getLocale().getString("rewards-sign-icon-name"))
-            .setLore(plugin.getLocale().getStringList("rewards-sign-icon-lore"))
+            .setDisplayName(plugin.getFishConfiguration().getString("rewards-sign-icon-name"))
+            .setLore(plugin.getFishConfiguration().getStringList("rewards-sign-icon-lore"))
             .build();
 
         inv.setItem(17, iconCmdGuide);
@@ -72,25 +72,25 @@ public class RewardsGUI implements Listener {
                 String number = Integer.toString(i + 1);
 
                 if (i == 7) {
-                    String text = plugin.getLocale().getString("rewards-consolation");
+                    String text = plugin.getFishConfiguration().getString("rewards-consolation");
                     ordinal = text;
                     number = text;
                 }
 
                 ItemStack iconEmerald = new ItemBuilder(Material.EMERALD)
-                        .setDisplayName(plugin.getLocale().getString("rewards-emerald-icon-name")
+                        .setDisplayName(plugin.getFishConfiguration().getString("rewards-emerald-icon-name")
                                 .replaceAll("%ordinal%", ordinal)
                                 .replaceAll("%number%", number)
                                 .replaceAll("%amount%", Double.toString(amount)))
-                        .setLore(plugin.getLocale().getStringList("rewards-emerald-icon-lore"))
+                        .setLore(plugin.getFishConfiguration().getStringList("rewards-emerald-icon-lore"))
                         .build();
 
                 inv.setItem(18 + i, iconEmerald);
             }
 
             ItemStack iconMoneyGuide = new ItemBuilder(Material.SIGN)
-                    .setDisplayName(plugin.getLocale().getString("rewards-sign-icon-name"))
-                    .setLore(plugin.getLocale().getStringList("rewards-sign-icon-lore"))
+                    .setDisplayName(plugin.getFishConfiguration().getString("rewards-sign-icon-name"))
+                    .setLore(plugin.getFishConfiguration().getStringList("rewards-sign-icon-lore"))
                     .build();
 
             inv.setItem(26, iconMoneyGuide);
@@ -114,7 +114,7 @@ public class RewardsGUI implements Listener {
 
                 event.getWhoClicked().closeInventory();
 
-                for (String msg : plugin.getLocale().getStringList("enter-cmd-prize")) {
+                for (String msg : plugin.getFishConfiguration().getStringList("enter-cmd-prize")) {
                     event.getWhoClicked().sendMessage(msg);
                 }
             }
@@ -124,7 +124,7 @@ public class RewardsGUI implements Listener {
 
                 event.getWhoClicked().closeInventory();
 
-                for (String msg : plugin.getLocale().getStringList("enter-cash-prize")) {
+                for (String msg : plugin.getFishConfiguration().getStringList("enter-cash-prize")) {
                     event.getWhoClicked().sendMessage(msg);
                 }
             }
@@ -142,7 +142,7 @@ public class RewardsGUI implements Listener {
                 editors.remove(id);
                 openGUI(event.getPlayer());
 
-                event.getPlayer().sendMessage(plugin.getLocale().getString("entered-cancel"));
+                event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-cancel"));
                 return;
             }
 
@@ -154,12 +154,12 @@ public class RewardsGUI implements Listener {
                     value = Double.parseDouble(event.getMessage());
                 } catch (NumberFormatException ex) {
                     event.getPlayer().sendMessage(
-                        String.format(plugin.getLocale().getString("entered-not-number"), event.getMessage()));
+                        String.format(plugin.getFishConfiguration().getString("entered-not-number"), event.getMessage()));
                     return;
                 }
 
                 if (value < 0) {
-                    event.getPlayer().sendMessage(plugin.getLocale().getString("entered-not-positive"));
+                    event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-not-positive"));
                     return;
                 }
                 double[] cashPrizes = plugin.getContestManager().getCashPrizes();
@@ -173,7 +173,7 @@ public class RewardsGUI implements Listener {
             editors.remove(id);
             openGUI(event.getPlayer());
 
-            event.getPlayer().sendMessage(plugin.getLocale().getString("entered-successfully"));
+            event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-successfully"));
         }
     }
 
@@ -196,7 +196,7 @@ public class RewardsGUI implements Listener {
             plugin.getContestManager().setRewards(rewards);
 
             if (!editors.containsKey(event.getPlayer().getUniqueId())) {
-                event.getPlayer().sendMessage(plugin.getLocale().getString("saved-changes"));
+                event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("saved-changes"));
             }
         }
     }

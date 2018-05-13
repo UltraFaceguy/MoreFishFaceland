@@ -21,7 +21,7 @@ public class PlayerListener implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         if (event.getPlayer().isOp() && plugin.getConfig().getBoolean("general.check-update") &&
                 !plugin.getUpdateChecker().isUpToDate()) {
-            for (String msg : plugin.getLocale().getStringList("new-version")) {
+            for (String msg : plugin.getFishConfiguration().getStringList("new-version")) {
                 event.getPlayer().sendMessage(String.format(msg, plugin.getUpdateChecker().getNewVersion()));
             }
         }

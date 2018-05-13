@@ -41,55 +41,43 @@ public class FishManager {
         fishMap.clear();
         rarityMap.clear();
 
-        FileConfiguration config = plugin.getLocale().getFishConfig();
+        loadRarities(plugin.getFishConfiguration().getRarityConfig());
+        loadFish(plugin.getFishConfiguration().getFishConfig());
 
-        loadRarities(config);
-
-        for (Rarity rarity : rarityList) {
-            ConfigurationSection section = config.getConfigurationSection("fish-list." + rarity.getName().toLowerCase());
-
-            for (String path : section.getKeys(false)) {
-                CustomFish fish = createCustomFish(section, path, rarity);
-
-                this.fishMap.put(path, fish);
-                this.rarityMap.get(rarity).add(fish);
-            }
-        }
-
+        plugin.getLogger().info("Loaded " + rarityList.size() + " fish rarities successfully.");
         plugin.getLogger().info("Loaded " + fishMap.size() + " fish successfully.");
     }
 
     private void loadRarities(FileConfiguration config) {
         ConfigurationSection rarities = config.getConfigurationSection("rarity-list");
-        double totalChance = 0.0D;
 
         for (String path : rarities.getKeys(false)) {
             String displayName = rarities.getString(path + ".display-name");
-            boolean isDefault = (rarities.contains(path + ".default") && rarities.getBoolean(path + ".default"));
-            double chance = (!isDefault ? rarities.getDouble(path + ".chance") * 0.01 : 0.0D);
+            double weight = rarities.getDouble(path + ".chance");
             ChatColor color = ChatColor.valueOf(rarities.getString(path + ".color").toUpperCase());
 
-            double additionalPrice = ((rarities.contains(path + ".additional-price")) ? rarities.getDouble(path + ".additional-price") : 0.0D);
-            boolean noBroadcast = (rarities.contains(path + ".no-broadcast") && rarities.getBoolean(path + ".no-broadcast"));
-            boolean noDisplay = (rarities.contains(path + ".no-display") && rarities.getBoolean(path + ".no-display"));
-            boolean firework = (rarities.contains(path + ".firework") && rarities.getBoolean(path + ".firework"));
+            double additionalPrice = rarities.getDouble(path + ".additional-price", 0D);
+            boolean noBroadcast = rarities.getBoolean(path + ".no-broadcast", true);
+            boolean noDisplay = rarities.getBoolean(path + ".no-display");
+            boolean firework = rarities.getBoolean(path + ".firework", false);
 
-            Rarity rarity = new Rarity(path, displayName, isDefault, chance, color, additionalPrice, noBroadcast, noDisplay, firework);
+            Rarity rarity = new Rarity(path, displayName, weight, color, additionalPrice, noBroadcast, noDisplay, firework);
 
             rarityList.add(rarity);
-            totalChance += chance;
         }
 
-        ListIterator<Rarity> it = rarityList.listIterator();
-        while (it.hasNext()) {
-            Rarity rarity = it.next();
+        for (Rarity rarity : rarityList) {
+            rarityMap.put(rarity, new ArrayList<>());
+        }
+    }
 
-            if (rarity.isDefault()) {
-                rarity = new Rarity(rarity, 1.0 - totalChance);
-                it.set(rarity);
+    private void loadFish(FileConfiguration config) {
+        for (Rarity rarity : rarityList) {
+            ConfigurationSection section = config.getConfigurationSection("fish-list." + rarity.getName().toLowerCase());
+            for (String path : section.getKeys(false)) {
+                CustomFish fish = createCustomFish(section, path, rarity);
+                fishMap.put(fish.getInternalName(), fish);
             }
-
-            rarityMap.put(rarity, new ArrayList<CustomFish>());
         }
     }
 
@@ -270,7 +258,7 @@ public class FishManager {
         ItemMeta meta = itemStack.getItemMeta();
 
         if (!fish.hasNoItemFormat()) {
-            FileConfiguration config = plugin.getLocale().getFishConfig();
+            FileConfiguration config = plugin.getFishConfiguration().getFishConfig();
 
             String displayName = config.getString("item-format.display-name")
                     .replaceAll("%player%", fisher)
@@ -337,7 +325,7 @@ public class FishManager {
         double randomVar = Math.random();
 
         for (Rarity rarity : rarityList) {
-            currentVar += rarity.getChance();
+            currentVar += rarity.getWeight();
 
             if (randomVar <= currentVar) {
                 return rarity;

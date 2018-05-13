@@ -22,12 +22,12 @@ public class SignListener implements Listener {
                 .replaceAll("§b", "");
         if ("[FishShop]".equalsIgnoreCase(firstLine)) {
             if (!event.getPlayer().hasPermission("morefish.admin")) {
-                event.getPlayer().sendMessage(plugin.getLocale().getString("no-permission"));
+                event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return;
             }
 
             event.setLine(0, "§b[FishShop]");
-            event.getPlayer().sendMessage(plugin.getLocale().getString("created-sign-shop"));
+            event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("created-sign-shop"));
         }
     }
 

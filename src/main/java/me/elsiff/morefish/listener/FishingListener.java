@@ -35,7 +35,7 @@ public class FishingListener implements Listener {
       if (!contest.hasStarted() && plugin.getConfig().getBoolean("general.no-fishing-unless-contest")) {
         event.setCancelled(true);
 
-        String msg = plugin.getLocale().getString("no-fishing-allowed");
+        String msg = plugin.getFishConfiguration().getString("no-fishing-allowed");
         event.getPlayer().sendMessage(msg);
         return;
       }
@@ -121,7 +121,7 @@ public class FishingListener implements Listener {
   }
 
   private String getMessage(String path, Player player, CaughtFish fish) {
-    String message = plugin.getLocale().getString(path);
+    String message = plugin.getFishConfiguration().getString(path);
 
     message = message.replaceAll("%player%", player.getName())
         .replaceAll("%length%", fish.getLength() + "")

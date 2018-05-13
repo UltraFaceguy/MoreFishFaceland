@@ -11,21 +11,24 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Locale {
+public class FishConfiguration {
     private final MoreFish plugin;
     private final File folder;
     private final String langPath;
     private final String fishPath;
+    private final String rarityPath;
     private FileConfiguration lang;
     private FileConfiguration fish;
+    private FileConfiguration rarity;
 
-    public Locale(MoreFish plugin) {
+    public FishConfiguration(MoreFish plugin) {
         this.plugin = plugin;
 
         String locale = plugin.getConfig().getString("general.locale");
-        folder = new File(plugin.getDataFolder(), "locale");
-        langPath = "lang_" + locale + ".yml";
-        fishPath = "fish_" + locale + ".yml";
+        folder = plugin.getDataFolder();
+        langPath = "locale\\lang_" + locale + ".yml";
+        fishPath = "fish.yml";
+        rarityPath = "rarity.yml";
 
         loadFiles();
     }
@@ -34,7 +37,7 @@ public class Locale {
         File file = new File(folder, path);
 
         if (!file.exists()) {
-            plugin.saveResource("locale\\" + path, false);
+            plugin.saveResource(path, false);
         }
 
         YamlConfiguration config = new YamlConfiguration();
@@ -51,10 +54,15 @@ public class Locale {
         return fish;
     }
 
+    public FileConfiguration getRarityConfig() {
+        return rarity;
+    }
+
     public boolean loadFiles() {
         try {
             this.lang = loadConfiguration(folder, langPath);
             this.fish = loadConfiguration(folder, fishPath);
+            this.rarity = loadConfiguration(folder, rarityPath);
             return true;
         } catch (IOException | InvalidConfigurationException e) {
             plugin.getLogger().severe(e.getMessage());
@@ -85,11 +93,19 @@ public class Locale {
         return fish.getInt("version");
     }
 
+    public int getRarityVersion() {
+        return rarity.getInt("version");
+    }
+
     public String getLangPath() {
         return langPath;
     }
 
     public String getFishPath() {
         return fishPath;
+    }
+
+    public String getRarityPath() {
+        return rarityPath;
     }
 }

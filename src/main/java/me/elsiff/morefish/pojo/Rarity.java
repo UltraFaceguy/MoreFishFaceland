@@ -5,25 +5,23 @@ import org.bukkit.ChatColor;
 public class Rarity {
     private final String name;
     private final String displayName;
-    private final boolean isDefault;
-    private final double chance;
+    private final double weight;
     private final ChatColor color;
     private final double additionalPrice;
     private final boolean noBroadcast;
     private final boolean noDisplay;
     private final boolean firework;
 
-    public Rarity(Rarity rarity, double chance) {
-        this(rarity.name, rarity.displayName, rarity.isDefault, chance, rarity.color, rarity.additionalPrice,
+    public Rarity(Rarity rarity, double weight) {
+        this(rarity.name, rarity.displayName, weight, rarity.color, rarity.additionalPrice,
                 rarity.noBroadcast, rarity.noDisplay, rarity.firework);
     }
 
-    public Rarity(String name, String displayName, boolean isDefault, double chance, ChatColor color, double additionalPrice,
+    public Rarity(String name, String displayName, double weight, ChatColor color, double additionalPrice,
                   boolean noBroadcast, boolean noDisplay, boolean firework) {
         this.name = name;
         this.displayName = displayName;
-        this.isDefault = isDefault;
-        this.chance = chance;
+        this.weight = weight;
         this.color = color;
         this.additionalPrice = additionalPrice;
         this.noBroadcast = noBroadcast;
@@ -39,12 +37,8 @@ public class Rarity {
         return displayName;
     }
 
-    public boolean isDefault() {
-        return isDefault;
-    }
-
-    public double getChance() {
-        return chance;
+    public double getWeight() {
+        return weight;
     }
 
     public ChatColor getColor() {

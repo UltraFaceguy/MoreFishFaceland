@@ -56,7 +56,7 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length < 1 || "help".equalsIgnoreCase(args[0])) {
             if (!sender.hasPermission("morefish.help")) {
-                sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
@@ -74,12 +74,12 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             return true;
         } else if ("start".equalsIgnoreCase(args[0])) {
             if (!sender.hasPermission("morefish.admin")) {
-                sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
             if (contest.hasStarted()) {
-                sender.sendMessage(plugin.getLocale().getString("already-ongoing"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("already-ongoing"));
                 return true;
             }
 
@@ -90,12 +90,12 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
                 try {
                     sec = Long.parseLong(args[1]);
                 } catch (NumberFormatException ex) {
-                    sender.sendMessage(String.format(plugin.getLocale().getString("not-number"), args[1]));
+                    sender.sendMessage(String.format(plugin.getFishConfiguration().getString("not-number"), args[1]));
                     return true;
                 }
 
                 if (sec <= 0) {
-                    sender.sendMessage(plugin.getLocale().getString("not-positive"));
+                    sender.sendMessage(plugin.getFishConfiguration().getString("not-positive"));
                     return true;
                 }
 
@@ -106,7 +106,7 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             }
 
 
-            String msg = plugin.getLocale().getString("contest-start");
+            String msg = plugin.getFishConfiguration().getString("contest-start");
             boolean broadcast = plugin.getConfig().getBoolean("messages.broadcast-start");
 
             if (broadcast) {
@@ -116,7 +116,7 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             }
 
             if (hasTimer) {
-                String msgTimer = plugin.getLocale().getString("contest-start-timer")
+                String msgTimer = plugin.getFishConfiguration().getString("contest-start-timer")
                         .replaceAll("%sec%", Long.toString(sec))
                         .replaceAll("%time%", plugin.getTimeString(sec));
 
@@ -130,17 +130,17 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             return true;
         } else if ("stop".equalsIgnoreCase(args[0])) {
             if (!sender.hasPermission("morefish.admin")) {
-                sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
             if (!contest.hasStarted()) {
-                sender.sendMessage(plugin.getLocale().getString("already-stopped"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("already-stopped"));
                 return true;
             }
 
 
-            String msg = plugin.getLocale().getString("contest-stop");
+            String msg = plugin.getFishConfiguration().getString("contest-stop");
             boolean showRanking = plugin.getConfig().getBoolean("messages.show-top-on-ending");
             boolean broadcast = plugin.getConfig().getBoolean("messages.broadcast-stop");
 
@@ -160,31 +160,31 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             return true;
         } else if ("clear".equalsIgnoreCase(args[0])) {
             if (!sender.hasPermission("morefish.admin")) {
-                sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
             if (!contest.hasStarted()) {
-                sender.sendMessage(plugin.getLocale().getString("not-ongoing"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("not-ongoing"));
                 return true;
             }
 
             contest.clearRecords();
 
-            sender.sendMessage(plugin.getLocale().getString("clear-records"));
+            sender.sendMessage(plugin.getFishConfiguration().getString("clear-records"));
 
             return true;
         } else if ("reload".equalsIgnoreCase(args[0])) {
             if (!sender.hasPermission("morefish.admin")) {
-                sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
             plugin.reloadConfig();
-            boolean loaded = plugin.getLocale().loadFiles();
+            boolean loaded = plugin.getFishConfiguration().loadFiles();
 
             if (!loaded) {
-                sender.sendMessage(plugin.getLocale().getString("failed-to-reload"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("failed-to-reload"));
                 return true;
             }
 
@@ -192,22 +192,22 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             plugin.loadFishShop();
             plugin.scheduleAutoRunning();
 
-            sender.sendMessage(plugin.getLocale().getString("reload-config"));
+            sender.sendMessage(plugin.getFishConfiguration().getString("reload-config"));
 
             return true;
         } else if ("top".equalsIgnoreCase(args[0])) {
             if (!sender.hasPermission("morefish.top")) {
-                sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
             if (!contest.hasStarted()) {
-                sender.sendMessage(plugin.getLocale().getString("not-ongoing"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("not-ongoing"));
                 return true;
             }
 
             if (contest.getRecordAmount() < 1) {
-                String msg = plugin.getLocale().getString("top-no-record");
+                String msg = plugin.getFishConfiguration().getString("top-no-record");
                 sender.sendMessage(msg);
             } else {
                 sendRankingMessage(sender, false);
@@ -216,14 +216,14 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             return true;
         } else if ("rewards".equalsIgnoreCase(args[0])) {
             if (!(sender instanceof Player)) {
-                sender.sendMessage(plugin.getLocale().getString("in-game-command"));
+                sender.sendMessage(plugin.getFishConfiguration().getString("in-game-command"));
                 return true;
             }
 
             Player player = (Player) sender;
 
             if (!player.hasPermission("morefish.admin")) {
-                player.sendMessage(plugin.getLocale().getString("no-permission"));
+                player.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                 return true;
             }
 
@@ -233,43 +233,43 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
         } else if ("shop".equalsIgnoreCase(args[0])) {
             if (args.length < 2) {
                 if (!sender.hasPermission("morefish.shop")) {
-                    sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                    sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                     return true;
                 }
 
                 if (!(sender instanceof Player)) {
-                    sender.sendMessage(plugin.getLocale().getString("in-game-command"));
+                    sender.sendMessage(plugin.getFishConfiguration().getString("in-game-command"));
                     return true;
                 }
 
                 Player player = (Player) sender;
 
                 if (plugin.getFishShopGUI() == null) {
-                    sender.sendMessage(plugin.getLocale().getString("shop-disabled"));
+                    sender.sendMessage(plugin.getFishConfiguration().getString("shop-disabled"));
                     return true;
                 }
 
                 plugin.getFishShopGUI().openGUI(player);
             } else {
                 if (!sender.hasPermission("morefish.admin")) {
-                    sender.sendMessage(plugin.getLocale().getString("no-permission"));
+                    sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
                     return true;
                 }
 
                 Player player = getPlayer(args[1]);
 
                 if (player == null) {
-                    sender.sendMessage(String.format(plugin.getLocale().getString("player-not-found"), args[1]));
+                    sender.sendMessage(String.format(plugin.getFishConfiguration().getString("player-not-found"), args[1]));
                     return true;
                 }
 
                 plugin.getFishShopGUI().openGUI(player);
-                sender.sendMessage(String.format(plugin.getLocale().getString("forced-player-to-shop"), player.getName()));
+                sender.sendMessage(String.format(plugin.getFishConfiguration().getString("forced-player-to-shop"), player.getName()));
             }
 
             return true;
         } else {
-            sender.sendMessage(plugin.getLocale().getString("invalid-command"));
+            sender.sendMessage(plugin.getFishConfiguration().getString("invalid-command"));
 
             return true;
         }
@@ -285,7 +285,7 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
     }
 
     private void sendRankingMessage(CommandSender sender, boolean broadcast) {
-        String format = plugin.getLocale().getString("top-list");
+        String format = plugin.getFishConfiguration().getString("top-list");
         int limit = plugin.getConfig().getInt("messages.top-number");
 
         for (int i = 1; i < limit + 1; i ++) {
@@ -326,14 +326,14 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
             int number = contest.getNumber(player);
             ContestManager.Record record = contest.getRecord(number);
 
-            msg = plugin.getLocale().getString("top-mine")
+            msg = plugin.getFishConfiguration().getString("top-mine")
                     .replaceAll("%ordinal%", plugin.getOrdinal(number))
                     .replaceAll("%number%", Integer.toString(number))
                     .replaceAll("%player%", record.getPlayer().getName())
                     .replaceAll("%length%", record.getLength() + "")
                     .replaceAll("%fish%", record.getFishName());
         } else {
-            msg = plugin.getLocale().getString("top-mine-no-record");
+            msg = plugin.getFishConfiguration().getString("top-mine-no-record");
         }
 
         player.sendMessage(msg);

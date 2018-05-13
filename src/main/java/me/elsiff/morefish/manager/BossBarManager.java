@@ -15,7 +15,7 @@ public class BossBarManager {
     }
 
     public void createTimerBar(long sec) {
-        String title = plugin.getLocale().getString("timer-boss-bar")
+        String title = plugin.getFishConfiguration().getString("timer-boss-bar")
                 .replaceAll("%time%", plugin.getTimeString(sec));
         BarColor color = BarColor.valueOf(plugin.getConfig().getString("messages.contest-bar-color").toUpperCase());
 
@@ -37,7 +37,7 @@ public class BossBarManager {
 
     public void updateTimerBar(long passed, long timer) {
         long left = timer - passed;
-        String title = plugin.getLocale().getString("timer-boss-bar")
+        String title = plugin.getFishConfiguration().getString("timer-boss-bar")
                 .replaceAll("%time%", plugin.getTimeString(left));
 
         timerBar.setTitle(title);

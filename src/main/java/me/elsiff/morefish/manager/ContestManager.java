@@ -228,7 +228,7 @@ public class ContestManager {
         }
 
         int number = getNumber(player);
-        String msg = plugin.getLocale().getString("reward");
+        String msg = plugin.getFishConfiguration().getString("reward");
 
         msg = msg.replaceAll("%player%", player.getName())
                 .replaceAll("%item%", getItemName(stack))
@@ -248,7 +248,7 @@ public class ContestManager {
 
         if (player.isOnline()) {
             int number = getNumber(player);
-            String msg = plugin.getLocale().getString("reward-cash-prize");
+            String msg = plugin.getFishConfiguration().getString("reward-cash-prize");
 
             msg = msg.replaceAll("%player%", player.getName())
                     .replaceAll("%amount%", Double.toString(amount))
