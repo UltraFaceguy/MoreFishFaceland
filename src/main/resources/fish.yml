@@ -1,98 +1,58 @@
-#
-# fish_pl.yml for MoreFish
-# translated by MashuuMidori (2.1.0)
-#
-# Wiki:
-# - https://github.com/elsiff/MoreFish/wiki/Custom-Fish-Tutorial
-# - https://github.com/elsiff/MoreFish/wiki/Custom-Rarity-Tutorial
-#
-
 version: 212
 
-# %player% - Numer porządkowy pozycji gracza (angielski, np. 1st, 2nd, 3rd, 4th)
-# %rarity% - Klasa rzadkości ryby (wielkie litery)
-# %rarity_color% - Kolor klasy
-# %length% - Długosc ryby
-# %fish% - Nazwa ryby
-# %date% - Data złowenia ryby
+# %player% - The ordinal of player's rank (e.g. 1st, 2nd, 3rd, 4th)
+# %rarity% - The rarity of fish (upper case)
+# %rarity_color% - The color of rarity
+# %length% - The length of fish
+# %fish% - The name of fish
+# %date% - The date when the fish was caught
 item-format:
   display-name: "%rarity_color%%fish%"
   lore:
   - "&7%length%cm"
-  - "&7Złowiona przez %player%"
-
-rarity-list:
-  common:
-    display-name: "ZWYCZAJNA"
-    default: true
-    color: "reset"
-    additional-price: 0.0
-    no-broadcast: true
-    no-display: true
-  junk:
-    display-name: "ŚMIEĆ"
-    chance: 1
-    color: "gray"
-    additional-price: -999999
-    no-display: true
-  rare:
-    display-name: "RZADKA"
-    chance: 22
-    color: "aqua"
-    additional-price: 3.0
-  epic:
-    display-name: "UNIKALNA"
-    chance: 6.5
-    color: "light_purple"
-    additional-price: 4.0
-  legendary:
-    display-name: "LEGENDARNA"
-    chance: 0.5
-    color: "green"
-    additional-price: 5.0
-    firework: true
+  - "&7Caught by %player%"
 
 fish-list:
   common:
     Shrimp:
-      display-name: "Krewetka"
+      display-name: "Shrimp"
       length-min: 3
       length-max: 8
       icon:
         id: "minecraft:fish"
     Anchovy:
-      display-name: "Sardela"
+      display-name: "Anchovy"
       length-min: 7
       length-max: 13
       icon:
         id: "minecraft:fish"
     Croaker:
-      display-name: "Kulbiniec"
+      display-name: "Croaker"
       length-min: 12
       length-max: 15
       icon:
         id: "minecraft:fish"
     Crab:
-      display-name: "Krab"
+      display-name: "Crab"
       length-min: 10
       length-max: 15
       icon:
         id: "minecraft:fish"
     Mackerel:
-      display-name: "Makrela"
+      display-name: "Mackerel"
       length-min: 15
       length-max: 30
       icon:
         id: "minecraft:fish"
     Herring:
-      display-name: "Śledź"
+      display-name: "Herring"
       length-min: 20
       length-max: 30
       icon:
         id: "minecraft:fish"
   junk:
     Pie:
-      display-name: "Ciasto"
+      display-name: "Pie"
       length-min: 3.14
       length-max: 3.14
       icon:
@@ -105,10 +65,10 @@ fish-list:
       icon:
         id: "minecraft:fish"
         lore:
-        - "&7Magikarp użył Splash!"
+        - "&7Magikarp used Splash!"
       skip-item-format: false
     Breadfish:
-      display-name: "Chleboryb"
+      display-name: "Breadfish"
       length-min: 10
       length-max: 30
       icon:
@@ -118,7 +78,7 @@ fish-list:
         - "&7the marvellous breadfish"
       skip-item-format: false
     WoodenAxe:
-      display-name: "Drewniana Siekiera Admina"
+      display-name: "Admin's Wooden Axe"
       length-min: 16
       length-max: 16
       icon:
@@ -127,7 +87,7 @@ fish-list:
         - "&7//cut"
       skip-item-format: false
     FishingRod:
-      display-name: "Wędka Którą Ktoś Wyrzucił Wciskając Przez Przypadek 'Q'"
+      display-name: "Fishing Rod That Someone Dropped Hitting 'Q' By Mistake"
       length-min: 16
       length-max: 16
       icon:
@@ -135,7 +95,7 @@ fish-list:
         durability: 30
       skip-item-format: true
     SpongeBob:
-      display-name: "Miły Kucharz z Tłustego Kraba"
+      display-name: "Nice Cook Of The Krusty Krab"
       length-min: 16
       length-max: 16
       icon:
@@ -143,104 +103,104 @@ fish-list:
       skip-item-format: true
   rare:
     Jellyfish:
-      display-name: "Meduza"
+      display-name: "Jellyfish"
       length-min: 20
       length-max: 40
       icon:
         id: "minecraft:fish"
       commands:
       - "minecraft:effect @p minecraft:poison 3 1"
-      - "tellraw @p [\"\",{\"text\":\"[MoreFish]\",\"color\":\"aqua\"},{\"text\":\" Przez meduzę czujesz się bardzo źle!\",\"color\":\"none\"}]"
+      - "tellraw @p [\"\",{\"text\":\"[MoreFish]\",\"color\":\"aqua\"},{\"text\":\" The jellyfish made you feel very bad!\",\"color\":\"none\"}]"
     Squid:
-      display-name: "Kałamarnica"
+      display-name: "Squid"
       length-min: 30
       length-max: 50
       icon:
         id: "minecraft:dye"
       commands:
       - "minecraft:effect @p minecraft:blindness 5 1"
-      - "tellraw @p [\"\",{\"text\":\"[MoreFish]\",\"color\":\"aqua\"},{\"text\":\" Kałamarnica podarowała ci nieco ciemności!\",\"color\":\"none\"}]"
+      - "tellraw @p [\"\",{\"text\":\"[MoreFish]\",\"color\":\"aqua\"},{\"text\":\" The squid gifted you some darkness!\",\"color\":\"none\"}]"
     Flatfish:
-      display-name: "Płastuga"
+      display-name: "Flatfish"
       length-min: 40
       length-max: 75
       icon:
         id: "minecraft:fish"
     SeaBream:
-      display-name: "Dorada"
+      display-name: "Sea Bream"
       length-min: 50
       length-max: 70
       icon:
         id: "minecraft:fish"
     SeaBass:
-      display-name: "Okoń"
+      display-name: "Sea Bass"
       length-min: 60
       length-max: 100
       icon:
         id: "minecraft:fish"
   epic:
     Clownfish:
-      display-name: "Błazenek"
+      display-name: "Clownfish"
       length-min: 10
       length-max: 18
       icon:
         id: "minecraft:fish"
         durability: 2
     Pufferfish:
-      display-name: "Rozdymka"
+      display-name: "Pufferfish"
       length-min: 20
       length-max: 30
       icon:
         id: "minecraft:fish"
         durability: 3
     SeaTurtle:
-      display-name: Żółw Morski"
+      display-name: "Sea Turtle"
       length-min: 90
       length-max: 130
       icon:
         id: "minecraft:fish"
     Salmon:
-      display-name: "Łosoś"
+      display-name: "Salmon"
       length-min: 100
       length-max: 130
       icon:
         id: "minecraft:fish"
         durability: 1
     BlackDrum:
-      display-name: "Chroma"
+      display-name: "Black Drum"
       length-min: 100
       length-max: 180
       icon:
         id: "minecraft:fish"
     Tuna:
-      display-name: "Tuńczyk"
+      display-name: "Tuna"
       length-min: 130
       length-max: 180
       icon:
         id: "minecraft:fish"
   legendary:
     BlueShark:
-      display-name: "Żarłacz Błękitny"
+      display-name: "Blue Shark"
       length-min: 160
       length-max: 240
       icon:
         id: "minecraft:fish"
         lore:
-        - "&7&oNajtwardsza ryba"
-        - "&7Otrzymaj &9Silę I (2:00)&7 jedząc ją."
+        - "&7&oThe Toughest Fish"
+        - "&7Get &9Strength I (2:00)&7 when you eat it."
       food-effects:
         commands:
         - "minecraft:effect @p minecraft:strength 120 1"
     PygmyWhale:
-      display-name: "Wieloryb Mały"
+      display-name: "Pygmy Whale"
       length-min: 600
       length-max: 650
       icon:
         id: "minecraft:fish"
         lore:
-        - "&7&oNajwiększa ryba"
-        - "&7Odzyskaj &9pełne życie i głód&7"
-        - "jedząc ją."
+        - "&7&oThe Biggest Fish"
+        - "&7Get &9full health and hunger&7"
+        - "when you eat it."
       food-effects:
         points: 20
         saturation: 14.4

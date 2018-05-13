@@ -1,0 +1,30 @@
+rarity-list:
+  junk:
+    weight: 100
+    display-name: "JUNK"
+    color: "gray"
+    additional-price: -999999
+    no-display: true
+  common:
+    weight: 100
+    display-name: "COMMON"
+    color: "reset"
+    additional-price: 0.0
+    no-broadcast: true
+    no-display: true
+  rare:
+    weight: 20
+    display-name: "RARE"
+    color: "aqua"
+    additional-price: 3.0
+  epic:
+    weight: 5
+    display-name: "EPIC"
+    color: "light_purple"
+    additional-price: 4.0
+  legendary:
+    weight: 1
+    display-name: "LEGENDARY"
+    color: "green"
+    additional-price: 5.0
+    firework: true
