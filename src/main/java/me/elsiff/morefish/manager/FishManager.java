@@ -30,11 +30,12 @@ public class FishManager {
     private final List<Rarity> rarityList = new ArrayList<>();
     private final Map<String, CustomFish> fishMap = new HashMap<>();
     private final Map<Rarity, List<CustomFish>> rarityMap = new HashMap<>();
+    private final double totalRarity;
 
     public FishManager(MoreFish plugin) {
         this.plugin = plugin;
-
         loadFishList();
+        this.totalRarity = getTotalRarity();
     }
 
     public void loadFishList() {
@@ -53,7 +54,7 @@ public class FishManager {
 
         for (String path : rarities.getKeys(false)) {
             String displayName = rarities.getString(path + ".display-name");
-            double weight = rarities.getDouble(path + ".chance");
+            double weight = rarities.getDouble(path + ".weight");
             ChatColor color = ChatColor.valueOf(rarities.getString(path + ".color").toUpperCase());
 
             double additionalPrice = rarities.getDouble(path + ".additional-price", 0D);
@@ -65,30 +66,37 @@ public class FishManager {
 
             rarityList.add(rarity);
         }
-
-        for (Rarity rarity : rarityList) {
-            rarityMap.put(rarity, new ArrayList<>());
-        }
     }
 
     private void loadFish(FileConfiguration config) {
+        List<Rarity> invalidRarities = new ArrayList<>();
         for (Rarity rarity : rarityList) {
+            List<CustomFish> fishList = new ArrayList<>();
             ConfigurationSection section = config.getConfigurationSection("fish-list." + rarity.getName().toLowerCase());
+            if (section == null) {
+              plugin.getLogger().severe("No section/fish found for rarity " + rarity.getName() + "!");
+              invalidRarities.add(rarity);
+              continue;
+            }
             for (String path : section.getKeys(false)) {
                 CustomFish fish = createCustomFish(section, path, rarity);
+                fishList.add(fish);
                 fishMap.put(fish.getInternalName(), fish);
             }
+            rarityMap.put(rarity, fishList);
+        }
+        for (Rarity r : invalidRarities) {
+          rarityList.remove(r);
         }
     }
 
     private CustomFish createCustomFish(ConfigurationSection section, String path, Rarity rarity) {
-        String displayName = section.getString(path + ".display-name");
+        String displayName = section.getString(path + ".display-name", "");
         double lengthMin = section.getDouble(path + ".length-min");
         double lengthMax = section.getDouble(path + ".length-max");
         double fishingExp = section.getDouble(path + ".fish-exp", 0);
         ItemStack icon = getIcon(section, path);
-        boolean skipItemFormat = (section.contains(path + ".skip-item-format") &&
-                section.getBoolean(path + ".skip-item-format"));
+        boolean skipItemFormat = section.getBoolean(path + ".skip-item-format", false);
         List<String> commands = new ArrayList<>();
         CustomFish.FoodEffects foodEffects = new CustomFish.FoodEffects();
         List<Condition> conditions = new ArrayList<>();
@@ -321,41 +329,31 @@ public class FishManager {
     }
 
     private Rarity getRandomRarity() {
-        double currentVar = 0.0D;
-        double randomVar = Math.random();
-
+        double cur = 0.0D;
+        double randomVar = random.nextDouble() * totalRarity;
         for (Rarity rarity : rarityList) {
-            currentVar += rarity.getWeight();
-
-            if (randomVar <= currentVar) {
+            cur += rarity.getWeight();
+            if (cur >= randomVar) {
                 return rarity;
             }
         }
-
         return null;
     }
 
     private CustomFish getRandomFish(Rarity rarity, Player player) {
-        List<CustomFish> list = new ArrayList<>(rarityMap.get(rarity));
-
-        Iterator<CustomFish> it = list.iterator();
-        while (it.hasNext()) {
-            CustomFish fish = it.next();
-
-            boolean remove = false;
-            for (Condition condition : fish.getConditions()) {
-                if (!condition.isSatisfying(player)) {
-                    remove = true;
-                }
+        List<CustomFish> fishList = new ArrayList<>();
+        for (CustomFish fish : rarityMap.get(rarity)) {
+          if (fish.getConditions().isEmpty()) {
+            fishList.add(fish);
+            continue;
+          }
+          for (Condition condition : fish.getConditions()) {
+            if (condition.isSatisfying(player)) {
+              fishList.add(fish);
             }
-
-            if (remove) {
-                it.remove();
-            }
+          }
         }
-
-        int index = random.nextInt(list.size());
-        return list.get(index);
+        return fishList.get(random.nextInt(fishList.size()));
     }
 
     private String encodeFishData(CaughtFish fish) {
@@ -410,5 +408,15 @@ public class FishManager {
         }
 
         return new CaughtFish(fish, length, catcher);
+    }
+
+    private double getTotalRarity() {
+      double total = 0;
+      for (Rarity r : rarityList) {
+        total += r.getWeight();
+        plugin.getLogger().info("adding " + r.getName() + " with weight " + r.getWeight());
+      }
+      plugin.getLogger().severe("total! " + total);
+      return total;
     }
 }
