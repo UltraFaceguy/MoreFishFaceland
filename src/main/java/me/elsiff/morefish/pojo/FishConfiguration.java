@@ -26,7 +26,7 @@ public class FishConfiguration {
 
         String locale = plugin.getConfig().getString("general.locale");
         folder = plugin.getDataFolder();
-        langPath = "locale\\lang_" + locale + ".yml";
+        langPath = "lang_" + locale + ".yml";
         fishPath = "fish.yml";
         rarityPath = "rarity.yml";
 

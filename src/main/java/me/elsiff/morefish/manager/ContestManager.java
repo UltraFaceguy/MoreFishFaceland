@@ -82,7 +82,7 @@ public class ContestManager {
             recordList.add(new Record(id, fishName, length));
         }
 
-        Collections.sort(recordList, comparator);
+        recordList.sort(comparator);
     }
 
     public void saveRecords() {
@@ -343,24 +343,22 @@ public class ContestManager {
     }
 
     public void addRecord(OfflinePlayer player, CaughtFish fish) {
-        boolean newRecord = false;
-        boolean containsRecord = false;
+        Record replacedRecord = null;
         for (Record r : recordList) {
             if (r.getPlayer() == player) {
-                containsRecord = true;
-                if (fish.getLength() > r.getLength()) {
-                    newRecord = true;
+                if (r.getLength() >= fish.getLength()) {
+                    return;
+                } else {
+                    replacedRecord = r;
+                    break;
                 }
-                break;
             }
         }
-        if (!containsRecord) {
-            recordList.add(new Record(player.getUniqueId(), fish));
-        } else if (newRecord) {
-            recordList.add(new Record(player.getUniqueId(), fish));
+        if (replacedRecord != null) {
+            recordList.remove(replacedRecord);
         }
-
-        Collections.sort(recordList, comparator);
+        recordList.add(new Record(player.getUniqueId(), fish));
+        recordList.sort(comparator);
     }
 
     public Record getRecord(int number) {

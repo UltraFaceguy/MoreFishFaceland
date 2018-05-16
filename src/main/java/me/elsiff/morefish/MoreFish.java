@@ -1,5 +1,6 @@
 package me.elsiff.morefish;
 
+import info.faceland.strife.StrifePlugin;
 import me.elsiff.morefish.command.GeneralCommands;
 import me.elsiff.morefish.hooker.*;
 import me.elsiff.morefish.listener.*;
@@ -91,8 +92,8 @@ public class MoreFish extends JavaPlugin {
         }
 
         if (manager.getPlugin("WorldGuard") != null && manager.getPlugin("WorldGuard").isEnabled()) {
-            worldGuardHooker = new WorldGuardHooker();
-            getLogger().info("Found WorldGuard for regions support.");
+          worldGuardHooker = new WorldGuardHooker();
+          getLogger().info("Found WorldGuard for regions support.");
         }
 
         loadFishShop();
@@ -254,6 +255,6 @@ public class MoreFish extends JavaPlugin {
     }
 
     public WorldGuardHooker getWorldGuardHooker() {
-        return worldGuardHooker;
+      return worldGuardHooker;
     }
 }

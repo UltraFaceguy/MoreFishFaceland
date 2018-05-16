@@ -1,5 +1,9 @@
 package me.elsiff.morefish.manager;
 
+import info.faceland.strife.util.PlayerDataUtil;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.MoreFish;
@@ -31,12 +35,11 @@ public class FishManager {
   private final List<Rarity> rarityList = new ArrayList<>();
   private final Map<String, CustomFish> fishMap = new HashMap<>();
   private final Map<Rarity, List<CustomFish>> rarityMap = new HashMap<>();
-  private final double totalRarity;
+  private final DecimalFormat df = new DecimalFormat("#.##");
 
   public FishManager(MoreFish plugin) {
     this.plugin = plugin;
     loadFishList();
-    this.totalRarity = getTotalRarity();
   }
 
   public void loadFishList() {
@@ -56,6 +59,7 @@ public class FishManager {
     for (String path : rarities.getKeys(false)) {
       String displayName = rarities.getString(path + ".display-name");
       double weight = rarities.getDouble(path + ".weight");
+      double bonusWeight = rarities.getDouble(path + ".level-weight");
       ChatColor color = ChatColor.valueOf(rarities.getString(path + ".color").toUpperCase());
 
       double additionalPrice = rarities.getDouble(path + ".additional-price", 0D);
@@ -63,7 +67,7 @@ public class FishManager {
       boolean noDisplay = rarities.getBoolean(path + ".no-display");
       boolean firework = rarities.getBoolean(path + ".firework", false);
 
-      Rarity rarity = new Rarity(path, displayName, weight, color, additionalPrice, noBroadcast, noDisplay, firework);
+      Rarity rarity = new Rarity(path, displayName, weight, bonusWeight, color, additionalPrice, noBroadcast, noDisplay, firework);
 
       rarityList.add(rarity);
     }
@@ -193,6 +197,9 @@ public class FishManager {
       itemStack = SkullUtils.setSkullTexture(itemStack, value);
     }
 
+    if (itemStack == null || itemStack.getItemMeta() == null) {
+      plugin.getLogger().severe("Item found at section '" + section + "' path '" + path +"' is invalid!");
+    }
     return itemStack;
   }
 
@@ -245,6 +252,10 @@ public class FishManager {
         String regionId = values[1];
         condition = new WGRegionCondtion(regionId);
         break;
+      case "fishing_skill":
+        int skill = Integer.parseInt(values[1]);
+        condition = new FishingSkillCondition(skill);
+        break;
       default:
         return null;
     }
@@ -252,10 +263,11 @@ public class FishManager {
   }
 
   public CaughtFish generateRandomFish(Player catcher) {
-    Rarity rarity = getRandomRarity();
+    // TODO: Only set level happen if strife is loaded
+    double rodLuck = getLuckFromPlayer(catcher);
+    Rarity rarity = getRandomRarity(PlayerDataUtil.getFishLevel(catcher), rodLuck);
     CustomFish type = getRandomFish(rarity, catcher);
-
-    return createCaughtFish(type, catcher);
+    return createCaughtFish(type, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
   }
 
   public CustomFish getCustomFish(String name) {
@@ -313,25 +325,22 @@ public class FishManager {
     return (getCaughtFish(itemStack) != null);
   }
 
-  private CaughtFish createCaughtFish(CustomFish fish, OfflinePlayer catcher) {
+  private CaughtFish createCaughtFish(CustomFish fish, OfflinePlayer catcher, boolean lucky) {
     double length;
 
-    if (fish.getLengthMax() == fish.getLengthMin()) {
+    if (fish.getLengthMax() <= fish.getLengthMin()) {
       length = fish.getLengthMax();
     } else {
-      int min = (int) fish.getLengthMin();
-      int max = (int) fish.getLengthMax();
-
-      length = (double) random.nextInt(max - min + 1) + min;
-      length += 0.1 * random.nextInt(10);
+      double sizeMultiplier = lucky ? random.nextDouble() : Math.pow(random.nextDouble(), 2);
+      length = fish.getLengthMin() + ((fish.getLengthMax() - fish.getLengthMin()) * sizeMultiplier);
+      length = new BigDecimal(length).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
-
     return new CaughtFish(fish, length, catcher);
   }
 
-  private Rarity getRandomRarity() {
+  private Rarity getRandomRarity(double level, double luck) {
     double cur = 0.0D;
-    double randomVar = random.nextDouble() * totalRarity;
+    double randomVar = random.nextDouble() * getTotalRarity((int)(level + luck));
     for (Rarity rarity : rarityList) {
       cur += rarity.getWeight();
       if (cur >= randomVar) {
@@ -411,13 +420,27 @@ public class FishManager {
     return new CaughtFish(fish, length, catcher);
   }
 
-  private double getTotalRarity() {
+  private double getTotalRarity(int level) {
     double total = 0;
     for (Rarity r : rarityList) {
-      total += r.getWeight();
-      plugin.getLogger().info("adding " + r.getName() + " with weight " + r.getWeight());
+      total += r.getWeight() + r.getBonusWeight() * level;
     }
-    plugin.getLogger().severe("total! " + total);
     return total;
+  }
+
+  private double getLuckFromPlayer(Player player) {
+    ItemStack mainHand = player.getEquipment().getItemInMainHand();
+    ItemStack offHand = player.getEquipment().getItemInOffHand();
+    if (mainHand != null && mainHand.getType() == Material.FISHING_ROD) {
+      return getTotalLuck(mainHand);
+    }
+    if (offHand != null && offHand.getType() == Material.FISHING_ROD) {
+      return getTotalLuck(offHand);
+    }
+    return 0;
+  }
+
+  private double getTotalLuck(ItemStack itemStack) {
+    return random.nextDouble() * itemStack.getEnchantmentLevel(Enchantment.LUCK) * 5;
   }
 }
