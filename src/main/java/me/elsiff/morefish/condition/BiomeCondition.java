@@ -1,19 +1,22 @@
 package me.elsiff.morefish.condition;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
 
 public class BiomeCondition implements Condition {
-    private final Biome biome;
+    private final List<Biome> biomeList = new ArrayList<>();
 
-    public BiomeCondition(Biome biome) {
-        this.biome = biome;
+    public BiomeCondition(List<Biome> biomeList) {
+        this.biomeList.clear();
+        this.biomeList.addAll(biomeList);
     }
 
     @Override
     public boolean isSatisfying(Player player) {
         Location loc = player.getLocation();
-        return (biome == player.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ()));
+        return (biomeList.contains(player.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ())));
     }
 }

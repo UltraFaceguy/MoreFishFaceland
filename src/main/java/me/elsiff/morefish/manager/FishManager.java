@@ -3,7 +3,6 @@ package me.elsiff.morefish.manager;
 import info.faceland.strife.util.PlayerDataUtil;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.MoreFish;
@@ -35,7 +34,6 @@ public class FishManager {
   private final List<Rarity> rarityList = new ArrayList<>();
   private final Map<String, CustomFish> fishMap = new HashMap<>();
   private final Map<Rarity, List<CustomFish>> rarityMap = new HashMap<>();
-  private final DecimalFormat df = new DecimalFormat("#.##");
 
   public FishManager(MoreFish plugin) {
     this.plugin = plugin;
@@ -222,8 +220,7 @@ public class FishManager {
         condition = new TimeCondition(time);
         break;
       case "biome":
-        Biome biome = Biome.valueOf(values[1].toUpperCase());
-        condition = new BiomeCondition(biome);
+        condition = new BiomeCondition(getBiomes(values));
         break;
       case "enchantment":
         Enchantment ench = IdentityUtils.getEnchantment(values[1].toLowerCase());
@@ -357,10 +354,14 @@ public class FishManager {
         fishList.add(fish);
         continue;
       }
+      boolean meetsConditions = true;
       for (Condition condition : fish.getConditions()) {
-        if (condition.isSatisfying(player)) {
-          fishList.add(fish);
+        if (!condition.isSatisfying(player)) {
+          meetsConditions = false;
         }
+      }
+      if (meetsConditions) {
+        fishList.add(fish);
       }
     }
     return fishList.get(random.nextInt(fishList.size()));
@@ -420,6 +421,18 @@ public class FishManager {
     return new CaughtFish(fish, length, catcher);
   }
 
+  private List<Biome> getBiomes(String[] values) {
+    List<Biome> biomes = new ArrayList<>();
+    for (int i=1; values.length < i; i++) {
+      try {
+        biomes.add(Biome.valueOf(values[i].toUpperCase()));
+      } catch (Exception e) {
+        plugin.getLogger().severe("Error! Fish has invalid biome condition '" + values[i] + "'!");
+      }
+    }
+    return biomes;
+  }
+
   private double getTotalRarity(int level) {
     double total = 0;
     for (Rarity r : rarityList) {
@@ -441,6 +454,8 @@ public class FishManager {
   }
 
   private double getTotalLuck(ItemStack itemStack) {
-    return random.nextDouble() * itemStack.getEnchantmentLevel(Enchantment.LUCK) * 5;
+    double minLuck = itemStack.getEnchantmentLevel(Enchantment.LUCK) * 3;
+    double bonusLuck = random.nextDouble() * itemStack.getEnchantmentLevel(Enchantment.LUCK) * 2;
+    return minLuck + bonusLuck;
   }
 }
