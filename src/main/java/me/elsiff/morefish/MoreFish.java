@@ -19,242 +19,255 @@ import java.util.Date;
 import java.util.List;
 
 public class MoreFish extends JavaPlugin {
-    private static MoreFish instance;
-    private PluginManager manager;
-    private int taskId = -1;
 
-    private FishConfiguration fishConfiguration;
-    private RewardsGUI rewardsGUI;
-    private FishShopGUI fishShopGUI;
-    private FishManager fishManager;
-    private ContestManager contestManager;
-    private BossBarManager bossBarManager;
-    private UpdateChecker updateChecker;
+  private static MoreFish instance;
+  private PluginManager manager;
+  private int taskId = -1;
 
-    private VaultHooker vaultHooker;
-    private CitizensHooker citizensHooker;
-    private PlaceholderAPIHooker placeholderAPIHooker;
-    private WorldGuardHooker worldGuardHooker;
+  private FishConfiguration fishConfiguration;
+  private RewardsGUI rewardsGUI;
+  private FishShopGUI fishShopGUI;
+  private FishManager fishManager;
+  private ContestManager contestManager;
+  private BossBarManager bossBarManager;
+  private UpdateChecker updateChecker;
 
-    public static void setInstance(MoreFish moreFish) {
-        instance = moreFish;
+  private VaultHooker vaultHooker;
+  private CitizensHooker citizensHooker;
+  private PlaceholderAPIHooker placeholderAPIHooker;
+  private WorldGuardHooker worldGuardHooker;
+  private StrifeHooker strifeHooker;
+
+  public static void setInstance(MoreFish moreFish) {
+    instance = moreFish;
+  }
+
+  public static MoreFish getInstance() {
+    return instance;
+  }
+
+  @Override
+  public void onEnable() {
+    setInstance(this);
+
+    saveDefaultConfig();
+    this.fishConfiguration = new FishConfiguration(this);
+
+    updateConfigFiles();
+
+    this.rewardsGUI = new RewardsGUI(this);
+    this.fishManager = new FishManager(this);
+    this.contestManager = new ContestManager(this);
+    this.updateChecker = new UpdateChecker(this);
+
+    // For 1.9+
+    if (getConfig().getBoolean("general.use-boss-bar") && Material.getMaterial("SHIELD") != null) {
+      this.bossBarManager = new BossBarManager(this);
     }
 
-    public static MoreFish getInstance() {
-        return instance;
+    getCommand("morefish").setExecutor(new GeneralCommands(this));
+
+    manager = getServer().getPluginManager();
+    manager.registerEvents(new FishingListener(this), this);
+    manager.registerEvents(new PlayerListener(this), this);
+    manager.registerEvents(rewardsGUI, this);
+
+    if (manager.getPlugin("Vault") != null && manager.getPlugin("Vault").isEnabled()) {
+      vaultHooker = new VaultHooker(this);
+
+      if (vaultHooker.setupEconomy()) {
+        getLogger().info("Found Vault for economy support.");
+      } else {
+        vaultHooker = null;
+      }
     }
 
-    @Override
-    public void onEnable() {
-        setInstance(this);
+    if (manager.getPlugin("Citizens") != null && manager.getPlugin("Citizens").isEnabled()) {
+      citizensHooker = new CitizensHooker();
+      citizensHooker.registerTrait();
+      getLogger().info("Found Citizens for Fish Shop Trait.");
+    }
 
-        saveDefaultConfig();
-        this.fishConfiguration = new FishConfiguration(this);
+    if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI")
+        .isEnabled()) {
+      placeholderAPIHooker = new PlaceholderAPIHooker(this);
+      getLogger().info("Found PlaceholderAPI for placeholders support.");
+    }
 
-        updateConfigFiles();
+    if (manager.getPlugin("WorldGuard") != null && manager.getPlugin("WorldGuard").isEnabled()) {
+      worldGuardHooker = new WorldGuardHooker();
+      getLogger().info("Found WorldGuard for regions support.");
+    }
+    if (manager.getPlugin("Strife") != null && manager.getPlugin("Strife").isEnabled()) {
+      strifeHooker = new StrifeHooker((StrifePlugin) manager.getPlugin("Strife"));
+      getLogger().info("Found WorldGuard for regions support.");
+    }
 
-        this.rewardsGUI = new RewardsGUI(this);
-        this.fishManager = new FishManager(this);
-        this.contestManager = new ContestManager(this);
-        this.updateChecker = new UpdateChecker(this);
+    loadFishShop();
+    scheduleAutoRunning();
 
-        // For 1.9+
-        if (getConfig().getBoolean("general.use-boss-bar") && Material.getMaterial("SHIELD") != null) {
-            this.bossBarManager = new BossBarManager(this);
+    getLogger().info("Plugin has been enabled!");
+  }
+
+  private void updateConfigFiles() {
+    final int verConfig = 210;
+    final int verLang = 211;
+    final int verFish = 1;
+    final int verRarity = 1;
+    String msg = fishConfiguration.getString("old-file");
+    ConsoleCommandSender console = getServer().getConsoleSender();
+    if (getConfig().getInt("version") != verConfig) {
+      // Update
+      console.sendMessage(String.format(msg, "config.yml"));
+    }
+    if (fishConfiguration.getLangVersion() != verLang) {
+      // Update
+      console.sendMessage(String.format(msg, fishConfiguration.getLangPath()));
+    }
+    if (fishConfiguration.getFishVersion() != verFish) {
+      // Update
+      console.sendMessage(String.format(msg, fishConfiguration.getFishPath()));
+    }
+    if (fishConfiguration.getRarityVersion() != verRarity) {
+      // Update
+      console.sendMessage(String.format(msg, fishConfiguration.getRarityPath()));
+    }
+  }
+
+  public void loadFishShop() {
+    if (this.fishShopGUI != null) {
+      return;
+    }
+
+    if (hasEconomy() && getConfig().getBoolean("fish-shop.enable")) {
+      this.fishShopGUI = new FishShopGUI(this);
+      manager.registerEvents(new SignListener(this), this);
+      manager.registerEvents(fishShopGUI, this);
+    }
+  }
+
+  public void scheduleAutoRunning() {
+    if (taskId != -1) {
+      getServer().getScheduler().cancelTask(taskId);
+    }
+
+    if (getConfig().getBoolean("auto-running.enable")) {
+      final int required = getConfig().getInt("auto-running.required-players");
+      final long timer = getConfig().getLong("auto-running.timer");
+      final List<String> startTime = getConfig().getStringList("auto-running.start-time");
+      final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
+
+      taskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
+        String now = dateFormat.format(new Date());
+
+        if (startTime.contains(now) && getServer().getOnlinePlayers().size() >= required) {
+          getServer().dispatchCommand(getServer().getConsoleSender(), "morefish start " + timer);
         }
+      }, 0L, 1200L);
+    }
+  }
 
-        getCommand("morefish").setExecutor(new GeneralCommands(this));
-
-        manager = getServer().getPluginManager();
-        manager.registerEvents(new FishingListener(this), this);
-        manager.registerEvents(new PlayerListener(this), this);
-        manager.registerEvents(rewardsGUI, this);
-
-        if (manager.getPlugin("Vault") != null && manager.getPlugin("Vault").isEnabled()) {
-            vaultHooker = new VaultHooker(this);
-
-            if (vaultHooker.setupEconomy()) {
-                getLogger().info("Found Vault for economy support.");
-            } else {
-                vaultHooker = null;
-            }
-        }
-
-        if (manager.getPlugin("Citizens") != null && manager.getPlugin("Citizens").isEnabled()) {
-            citizensHooker = new CitizensHooker();
-            citizensHooker.registerTrait();
-            getLogger().info("Found Citizens for Fish Shop Trait.");
-        }
-
-        if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI").isEnabled()) {
-            placeholderAPIHooker = new PlaceholderAPIHooker(this);
-            getLogger().info("Found PlaceholderAPI for placeholders support.");
-        }
-
-        if (manager.getPlugin("WorldGuard") != null && manager.getPlugin("WorldGuard").isEnabled()) {
-          worldGuardHooker = new WorldGuardHooker();
-          getLogger().info("Found WorldGuard for regions support.");
-        }
-
-        loadFishShop();
-        scheduleAutoRunning();
-
-        getLogger().info("Plugin has been enabled!");
+  @Override
+  public void onDisable() {
+    if (getConfig().getBoolean("general.save-records")) {
+      contestManager.saveRecords();
     }
 
-    private void updateConfigFiles() {
-        final int verConfig = 210;
-        final int verLang = 211;
-        final int verFish = 1;
-        final int verRarity = 1;
-        String msg = fishConfiguration.getString("old-file");
-        ConsoleCommandSender console = getServer().getConsoleSender();
-        if (getConfig().getInt("version") != verConfig) {
-            // Update
-            console.sendMessage(String.format(msg, "config.yml"));
-        }
-        if (fishConfiguration.getLangVersion() != verLang) {
-            // Update
-            console.sendMessage(String.format(msg, fishConfiguration.getLangPath()));
-        }
-        if (fishConfiguration.getFishVersion() != verFish) {
-            // Update
-            console.sendMessage(String.format(msg, fishConfiguration.getFishPath()));
-        }
-        if (fishConfiguration.getRarityVersion() != verRarity) {
-            // Update
-            console.sendMessage(String.format(msg, fishConfiguration.getRarityPath()));
+    if (getCitizensHooker() != null) {
+      getCitizensHooker().deregisterTrait();
+    }
+
+    getLogger().info("Plugin has been disabled!");
+  }
+
+  public FishConfiguration getFishConfiguration() {
+    return fishConfiguration;
+  }
+
+  public FishManager getFishManager() {
+    return fishManager;
+  }
+
+  public ContestManager getContestManager() {
+    return contestManager;
+  }
+
+  public BossBarManager getBossBarManager() {
+    return bossBarManager;
+  }
+
+  public boolean hasBossBar() {
+    return (getBossBarManager() != null);
+  }
+
+  public UpdateChecker getUpdateChecker() {
+    return updateChecker;
+  }
+
+  public String getOrdinal(int number) {
+    switch (number) {
+      case 1:
+        return "1st";
+      case 2:
+        return "2nd";
+      case 3:
+        return "3rd";
+      default:
+        if (number > 20) {
+          return (number / 10) + getOrdinal(number % 10);
+        } else {
+          return number + "th";
         }
     }
+  }
 
-    public void loadFishShop() {
-        if (this.fishShopGUI != null)
-            return;
+  public String getTimeString(long sec) {
+    StringBuilder builder = new StringBuilder();
 
-        if (hasEconomy() && getConfig().getBoolean("fish-shop.enable")) {
-            this.fishShopGUI = new FishShopGUI(this);
-            manager.registerEvents(new SignListener(this), this);
-            manager.registerEvents(fishShopGUI, this);
-        }
+    int minutes = (int) (sec / 60);
+    int second = (int) (sec - minutes * 60);
+
+    if (minutes > 0) {
+      builder.append(minutes);
+      builder.append(getFishConfiguration().getString("time-format-minutes"));
+      builder.append(" ");
     }
 
-    public void scheduleAutoRunning() {
-        if (taskId != -1)
-            getServer().getScheduler().cancelTask(taskId);
+    builder.append(second);
+    builder.append(getFishConfiguration().getString("time-format-seconds"));
 
-        if (getConfig().getBoolean("auto-running.enable")) {
-            final int required = getConfig().getInt("auto-running.required-players");
-            final long timer = getConfig().getLong("auto-running.timer");
-            final List<String> startTime = getConfig().getStringList("auto-running.start-time");
-            final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
+    return builder.toString();
+  }
 
-            taskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
-                String now = dateFormat.format(new Date());
+  public RewardsGUI getRewardsGUI() {
+    return rewardsGUI;
+  }
 
-                if (startTime.contains(now) && getServer().getOnlinePlayers().size() >= required) {
-                    getServer().dispatchCommand(getServer().getConsoleSender(), "morefish start " + timer);
-                }
-            }, 0L, 1200L);
-        }
-    }
+  public FishShopGUI getFishShopGUI() {
+    return fishShopGUI;
+  }
 
-    @Override
-    public void onDisable() {
-        if (getConfig().getBoolean("general.save-records")) {
-            contestManager.saveRecords();
-        }
+  public boolean hasEconomy() {
+    return (vaultHooker != null);
+  }
 
-        if (getCitizensHooker() != null) {
-            getCitizensHooker().deregisterTrait();
-        }
+  public VaultHooker getVaultHooker() {
+    return vaultHooker;
+  }
 
-        getLogger().info("Plugin has been disabled!");
-    }
+  public CitizensHooker getCitizensHooker() {
+    return citizensHooker;
+  }
 
-    public FishConfiguration getFishConfiguration() {
-        return fishConfiguration;
-    }
+  public PlaceholderAPIHooker getPlaceholderAPIHooker() {
+    return placeholderAPIHooker;
+  }
 
-    public FishManager getFishManager() {
-        return fishManager;
-    }
+  public WorldGuardHooker getWorldGuardHooker() {
+    return worldGuardHooker;
+  }
 
-    public ContestManager getContestManager() {
-        return contestManager;
-    }
-
-    public BossBarManager getBossBarManager() {
-        return bossBarManager;
-    }
-
-    public boolean hasBossBar() {
-        return (getBossBarManager() != null);
-    }
-
-    public UpdateChecker getUpdateChecker() {
-        return updateChecker;
-    }
-
-    public String getOrdinal(int number) {
-        switch (number) {
-            case 1:
-                return "1st";
-            case 2:
-                return "2nd";
-            case 3:
-                return "3rd";
-            default:
-                if (number > 20) {
-                    return (number / 10) + getOrdinal(number % 10);
-                } else {
-                    return number + "th";
-                }
-        }
-    }
-
-    public String getTimeString(long sec) {
-        StringBuilder builder = new StringBuilder();
-
-        int minutes = (int) (sec / 60);
-        int second = (int) (sec - minutes * 60);
-
-        if (minutes > 0) {
-            builder.append(minutes);
-            builder.append(getFishConfiguration().getString("time-format-minutes"));
-            builder.append(" ");
-        }
-
-        builder.append(second);
-        builder.append(getFishConfiguration().getString("time-format-seconds"));
-
-        return builder.toString();
-    }
-
-    public RewardsGUI getRewardsGUI() {
-        return rewardsGUI;
-    }
-
-    public FishShopGUI getFishShopGUI() {
-        return fishShopGUI;
-    }
-
-    public boolean hasEconomy() {
-        return (vaultHooker != null);
-    }
-
-    public VaultHooker getVaultHooker() {
-        return vaultHooker;
-    }
-
-    public CitizensHooker getCitizensHooker() {
-        return citizensHooker;
-    }
-
-    public PlaceholderAPIHooker getPlaceholderAPIHooker() {
-        return placeholderAPIHooker;
-    }
-
-    public WorldGuardHooker getWorldGuardHooker() {
-      return worldGuardHooker;
-    }
+  public StrifeHooker getStrifeHooker() {
+    return strifeHooker;
+  }
 }

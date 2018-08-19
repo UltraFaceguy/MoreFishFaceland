@@ -1,6 +1,5 @@
 package me.elsiff.morefish.listener;
 
-import info.faceland.strife.util.SkillExperienceUtil;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
@@ -78,7 +77,7 @@ public class FishingListener implements Listener {
 
     if (fish.getFishingExperience() > 0.01) {
       double xp = fish.getFishingExperience() * (contest.hasStarted() ? 2 : 1);
-      SkillExperienceUtil.addFishExperience(catcher, xp);
+      plugin.getStrifeHooker().addFishingExperience(catcher, xp);
     }
 
     boolean new1st = contest.hasStarted() && contest.isNew1st(fish);
