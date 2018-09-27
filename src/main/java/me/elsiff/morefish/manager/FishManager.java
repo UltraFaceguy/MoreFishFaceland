@@ -260,9 +260,9 @@ public class FishManager {
   }
 
   public CaughtFish generateRandomFish(Player catcher) {
-    // TODO: Only set level happen if strife is loaded
+    // TODO: Only set level if strife is loaded
     double rodLuck = getLuckFromPlayer(catcher);
-    Rarity rarity = getRandomRarity(PlayerDataUtil.getFishLevel(catcher), rodLuck);
+    Rarity rarity = getRandomRarity(PlayerDataUtil.getFishSkill(catcher, true), rodLuck);
     CustomFish type = getRandomFish(rarity, catcher);
     return createCaughtFish(type, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
   }
@@ -336,10 +336,11 @@ public class FishManager {
   }
 
   private Rarity getRandomRarity(double level, double luck) {
+    int skillAndLuckBonus = (int) (level + luck);
     double cur = 0.0D;
-    double randomVar = random.nextDouble() * getTotalRarity((int)(level + luck));
+    double randomVar = random.nextDouble() * getTotalRarity(skillAndLuckBonus);
     for (Rarity rarity : rarityList) {
-      cur += rarity.getWeight();
+      cur += getAdjustedWeight(rarity, skillAndLuckBonus);
       if (cur >= randomVar) {
         return rarity;
       }
@@ -439,6 +440,10 @@ public class FishManager {
       total += r.getWeight() + r.getBonusWeight() * level;
     }
     return total;
+  }
+
+  private double getAdjustedWeight(Rarity rarity, int bonus) {
+    return rarity.getWeight() + rarity.getBonusWeight() * bonus;
   }
 
   private double getLuckFromPlayer(Player player) {

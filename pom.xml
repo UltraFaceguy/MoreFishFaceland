@@ -46,7 +46,7 @@
         <dependency>
             <groupId>io.pixeloutlaw</groupId>
             <artifactId>strife</artifactId>
-            <version>2.0.2-SNAPSHOT</version>
+            <version>2.0.3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>net.milkbowl.vault</groupId>
