@@ -15,452 +15,466 @@ import java.io.IOException;
 import java.util.*;
 
 public class ContestManager {
-    private static final String PREFIX_REWARD = "reward_";
-    private static final String PREFIX_CMD_REWARD = "cmd_";
-    private static final String PREFIX_CASH_PRIZE = "cash-prize_";
-    private final MoreFish plugin;
-    private final RecordComparator comparator = new RecordComparator();
-    private final List<Record> recordList = new ArrayList<>();
-    private final File fileRewards;
-    private final FileConfiguration configRewards;
-    private File fileRecords;
-    private FileConfiguration configRecords;
-    private boolean hasStarted = false;
-    private TimerTask task = null;
 
-    public ContestManager(MoreFish plugin) {
-        this.plugin = plugin;
+  private static final String PREFIX_REWARD = "reward_";
+  private static final String PREFIX_CMD_REWARD = "cmd_";
+  private static final String PREFIX_CASH_PRIZE = "cash-prize_";
+  private final MoreFish plugin;
+  private final RecordComparator comparator = new RecordComparator();
+  private final List<Record> recordList = new ArrayList<>();
+  private final File fileRewards;
+  private final FileConfiguration configRewards;
+  private File fileRecords;
+  private FileConfiguration configRecords;
+  private boolean hasStarted = false;
+  private TimerTask task = null;
 
-        if (plugin.getConfig().getBoolean("general.auto-start")) {
-            hasStarted = true;
-        }
+  public ContestManager(MoreFish plugin) {
+    this.plugin = plugin;
 
-        fileRewards = new File(plugin.getDataFolder(), "rewards.yml");
-
-        createFile(fileRewards);
-        configRewards = YamlConfiguration.loadConfiguration(fileRewards);
-
-        if (plugin.getConfig().getBoolean("general.save-records")) {
-            fileRecords = new File(plugin.getDataFolder(), "records.yml");
-            createFile(fileRecords);
-            configRecords = YamlConfiguration.loadConfiguration(fileRecords);
-
-            loadRecords();
-        }
+    if (plugin.getConfig().getBoolean("general.auto-start")) {
+      hasStarted = true;
     }
 
-    private void createFile(File file) {
-        if (!file.exists()) {
-            try {
-                boolean created = file.createNewFile();
+    fileRewards = new File(plugin.getDataFolder(), "rewards.yml");
 
-                if (!created) {
-                    plugin.getLogger().warning("Failed to create " + file.getName() + "!");
-                }
-            } catch (IOException e) {
-                plugin.getLogger().severe(e.getMessage());
-            }
+    createFile(fileRewards);
+    configRewards = YamlConfiguration.loadConfiguration(fileRewards);
+
+    if (plugin.getConfig().getBoolean("general.save-records")) {
+      fileRecords = new File(plugin.getDataFolder(), "records.yml");
+      createFile(fileRecords);
+      configRecords = YamlConfiguration.loadConfiguration(fileRecords);
+
+      loadRecords();
+    }
+  }
+
+  private void createFile(File file) {
+    if (!file.exists()) {
+      try {
+        boolean created = file.createNewFile();
+
+        if (!created) {
+          plugin.getLogger().warning("Failed to create " + file.getName() + "!");
         }
+      } catch (IOException e) {
+        plugin.getLogger().severe(e.getMessage());
+      }
+    }
+  }
+
+  private void saveRewards() {
+    try {
+      configRewards.save(fileRewards);
+    } catch (IOException e) {
+      plugin.getLogger().severe(e.getMessage());
+    }
+  }
+
+  private void loadRecords() {
+    recordList.clear();
+
+    for (String path : configRecords.getKeys(false)) {
+      UUID id = UUID.fromString(configRecords.getString(path + ".player"));
+      String fishName = configRecords.getString(path + ".fish-name");
+      double length = configRecords.getDouble(path + ".length");
+
+      recordList.add(new Record(id, fishName, length));
     }
 
-    private void saveRewards() {
-        try {
-            configRewards.save(fileRewards);
-        } catch (IOException e) {
-            plugin.getLogger().severe(e.getMessage());
-        }
+    recordList.sort(comparator);
+  }
+
+  public void saveRecords() {
+    for (String path : configRecords.getKeys(false)) {
+      configRecords.set(path, null);
     }
 
-    private void loadRecords() {
-        recordList.clear();
-
-        for (String path : configRecords.getKeys(false)) {
-            UUID id = UUID.fromString(configRecords.getString(path + ".player"));
-            String fishName = configRecords.getString(path + ".fish-name");
-            double length = configRecords.getDouble(path + ".length");
-
-            recordList.add(new Record(id, fishName, length));
-        }
-
-        recordList.sort(comparator);
+    for (int i = 0; i < recordList.size(); i++) {
+      Record record = recordList.get(i);
+      configRecords.set(i + ".player", record.getPlayer().getUniqueId().toString());
+      configRecords.set(i + ".fish-name", record.getFishName());
+      configRecords.set(i + ".length", record.getLength());
     }
 
-    public void saveRecords() {
-        for (String path : configRecords.getKeys(false)) {
-            configRecords.set(path, null);
-        }
+    try {
+      configRecords.save(fileRecords);
+    } catch (IOException e) {
+      plugin.getLogger().severe(e.getMessage());
+    }
+  }
 
-        for (int i = 0; i < recordList.size(); i++) {
-            Record record = recordList.get(i);
-            configRecords.set(i + ".player", record.getPlayer().getUniqueId().toString());
-            configRecords.set(i + ".fish-name", record.getFishName());
-            configRecords.set(i + ".length", record.getLength());
-        }
+  public boolean hasStarted() {
+    return hasStarted;
+  }
 
-        try {
-            configRecords.save(fileRecords);
-        } catch (IOException e) {
-            plugin.getLogger().severe(e.getMessage());
-        }
+  public boolean hasTimer() {
+    return (task != null);
+  }
+
+  public void start() {
+    hasStarted = true;
+  }
+
+  public void startWithTimer(long sec) {
+    task = new TimerTask(sec);
+    task.runTaskTimer(plugin, 20, 20);
+
+    if (plugin.hasBossBar()) {
+      plugin.getBossBarManager().createTimerBar(sec);
     }
 
-    public boolean hasStarted() {
-        return hasStarted;
+    start();
+  }
+
+  public void stop() {
+    if (task != null) {
+      if (plugin.hasBossBar()) {
+        plugin.getBossBarManager().removeTimerBar();
+      }
+
+      task.cancel();
+      task = null;
     }
 
-    public boolean hasTimer() {
-        return (task != null);
+    giveRewards();
+
+    if (!plugin.getConfig().getBoolean("general.save-records")) {
+      recordList.clear();
     }
 
-    public void start() {
-        hasStarted = true;
+    hasStarted = false;
+  }
+
+  private void giveRewards() {
+    Set<Integer> receivers = new HashSet<>();
+
+    ItemStack[] rewards = getRewards();
+    for (int i = 0; i < rewards.length - 1 && i < recordList.size(); i++) {
+      ItemStack stack = rewards[i];
+
+      if (stack == null || stack.getType() == Material.AIR) {
+        continue;
+      }
+
+      OfflinePlayer player = getRecord(i + 1).getPlayer();
+      sendReward(player, stack);
+
+      receivers.add(i);
     }
 
-    public void startWithTimer(long sec) {
-        task = new TimerTask(sec);
-        task.runTaskTimer(plugin, 20, 20);
+    if (plugin.hasEconomy()) {
+      double[] cashPrizes = getCashPrizes();
+      for (int i = 0; i < cashPrizes.length - 1 && i < recordList.size(); i++) {
+        double amount = cashPrizes[i];
 
-        if (plugin.hasBossBar()) {
-            plugin.getBossBarManager().createTimerBar(sec);
+        if (amount <= 0) {
+          continue;
         }
 
-        start();
+        OfflinePlayer player = getRecord(i + 1).getPlayer();
+        sendCashPrize(player, amount);
+
+        receivers.add(i);
+      }
+
+      if (cashPrizes[7] > 0) {
+        for (int i = 0; i < getRecordAmount(); i++) {
+          if (receivers.contains(i)) {
+            continue;
+          }
+
+          Record record = getRecord(i + 1);
+
+          sendCashPrize(record.getPlayer(), cashPrizes[7]);
+        }
+      }
     }
 
-    public void stop() {
-        if (task != null) {
-            if (plugin.hasBossBar()) {
-                plugin.getBossBarManager().removeTimerBar();
-            }
+    String[] cmdRewards = getCmdRewards();
+    for (int i = 0; i < cmdRewards.length - 1 && i < recordList.size(); i++) {
+      String command = cmdRewards[i];
 
-            task.cancel();
-            task = null;
-        }
+      if (command == null) {
+        continue;
+      }
 
-        giveRewards();
+      OfflinePlayer player = getRecord(i + 1).getPlayer();
+      String str = command.replaceAll("@p", player.getName());
+      plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), str);
 
-        if (!plugin.getConfig().getBoolean("general.save-records")) {
-            recordList.clear();
-        }
-
-        hasStarted = false;
+      receivers.add(i);
     }
 
-    private void giveRewards() {
-        Set<Integer> receivers = new HashSet<>();
-
-        ItemStack[] rewards = getRewards();
-        for (int i = 0; i < rewards.length - 1 && i < recordList.size(); i++) {
-            ItemStack stack = rewards[i];
-
-            if (stack == null || stack.getType() == Material.AIR)
-                continue;
-
-            OfflinePlayer player = getRecord(i + 1).getPlayer();
-            sendReward(player, stack);
-
-            receivers.add(i);
+    if (rewards[7] != null) {
+      for (int i = 0; i < getRecordAmount(); i++) {
+        if (receivers.contains(i)) {
+          continue;
         }
 
-        if (plugin.hasEconomy()) {
-            double[] cashPrizes = getCashPrizes();
-            for (int i = 0; i < cashPrizes.length - 1 && i < recordList.size(); i++) {
-                double amount = cashPrizes[i];
+        Record record = getRecord(i + 1);
+        sendReward(record.getPlayer(), rewards[7]);
+      }
+    }
+  }
 
-                if (amount <= 0)
-                    continue;
-
-                OfflinePlayer player = getRecord(i + 1).getPlayer();
-                sendCashPrize(player, amount);
-
-                receivers.add(i);
-            }
-
-            if (cashPrizes[7] > 0) {
-                for (int i = 0; i < getRecordAmount(); i++) {
-                    if (receivers.contains(i))
-                        continue;
-
-                    Record record = getRecord(i + 1);
-
-                    sendCashPrize(record.getPlayer(), cashPrizes[7]);
-                }
-            }
-        }
-
-        String[] cmdRewards = getCmdRewards();
-        for (int i = 0; i < cmdRewards.length - 1 && i < recordList.size(); i++) {
-            String command = cmdRewards[i];
-
-            if (command == null)
-                continue;
-
-            OfflinePlayer player = getRecord(i + 1).getPlayer();
-            String str = command.replaceAll("@p", player.getName());
-            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), str);
-
-            receivers.add(i);
-        }
-
-        if (rewards[7] != null) {
-            for (int i = 0; i < getRecordAmount(); i++) {
-                if (receivers.contains(i))
-                    continue;
-
-                Record record = getRecord(i + 1);
-                sendReward(record.getPlayer(), rewards[7]);
-            }
-        }
+  private void sendReward(OfflinePlayer oPlayer, ItemStack stack) {
+    if (!oPlayer.isOnline()) {
+      plugin.getLogger().info(oPlayer.getName()
+          + "'s reward of fishing contest has not been sent as the player is offline now.");
+      return;
     }
 
-    private void sendReward(OfflinePlayer oPlayer, ItemStack stack) {
-        if (!oPlayer.isOnline()) {
-            plugin.getLogger().info(oPlayer.getName() + "'s reward of fishing contest has not been sent as the player is offline now.");
-            return;
-        }
+    Player player = oPlayer.getPlayer();
 
-        Player player = oPlayer.getPlayer();
+    if (player.getInventory().firstEmpty() != -1) {
+      player.getInventory().addItem(stack);
+    } else {
+      player.getWorld().dropItem(player.getLocation(), stack);
+    }
 
-        if (player.getInventory().firstEmpty() != -1) {
-            player.getInventory().addItem(stack);
+    int number = getNumber(player);
+    String msg = plugin.getFishConfiguration().getString("reward");
+
+    msg = msg.replaceAll("%player%", player.getName())
+        .replaceAll("%item%", getItemName(stack))
+        .replaceAll("%ordinal%", plugin.getOrdinal(number))
+        .replaceAll("%number%", Integer.toString(number));
+
+    player.sendMessage(msg);
+  }
+
+  private void sendCashPrize(OfflinePlayer player, double amount) {
+    if (!plugin.getVaultHooker().getEconomy().hasAccount(player)) {
+      plugin.getLogger().info(player.getName()
+          + "'s reward of fishing contest has not been sent as having no economy account.");
+      return;
+    } else {
+      plugin.getVaultHooker().getEconomy().depositPlayer(player, amount);
+    }
+
+    if (player.isOnline()) {
+      int number = getNumber(player);
+      String msg = plugin.getFishConfiguration().getString("reward-cash-prize");
+
+      msg = msg.replaceAll("%player%", player.getName())
+          .replaceAll("%amount%", Double.toString(amount))
+          .replaceAll("%ordinal%", plugin.getOrdinal(number))
+          .replaceAll("%number%", Integer.toString(number));
+
+      player.getPlayer().sendMessage(msg);
+    }
+  }
+
+  private String getItemName(ItemStack item) {
+    return ((item.hasItemMeta() && item.getItemMeta().hasDisplayName()) ?
+        item.getItemMeta().getDisplayName()
+        : item.getType().name().toLowerCase().replaceAll("_", " "));
+  }
+
+  public ItemStack[] getRewards() {
+    ItemStack[] rewards = new ItemStack[8];
+
+    for (String path : configRewards.getKeys(false)) {
+      if (!path.startsWith(PREFIX_REWARD)) {
+        continue;
+      }
+
+      int i = Integer.parseInt(path.substring(7));
+      ItemStack item = configRewards.getItemStack("reward_" + i);
+
+      rewards[i] = item;
+    }
+
+    return rewards;
+  }
+
+  public void setRewards(ItemStack[] rewards) {
+    for (int i = 0; i < rewards.length; i++) {
+      configRewards.set(PREFIX_REWARD + i, rewards[i]);
+    }
+
+    saveRewards();
+  }
+
+  public String[] getCmdRewards() {
+    String[] rewards = new String[8];
+
+    for (String path : configRewards.getKeys(false)) {
+      if (!path.startsWith(PREFIX_CMD_REWARD)) {
+        continue;
+      }
+
+      int i = Integer.parseInt(path.substring(4));
+      String cmd = configRewards.getString("cmd_" + i);
+
+      rewards[i] = cmd;
+    }
+
+    return rewards;
+  }
+
+  public void setCmdRewards(String[] rewards) {
+    for (int i = 0; i < rewards.length; i++) {
+      configRewards.set(PREFIX_CMD_REWARD + i, rewards[i]);
+    }
+
+    saveRewards();
+  }
+
+  public double[] getCashPrizes() {
+    double[] arr = new double[8];
+
+    for (String path : configRewards.getKeys(false)) {
+      if (!path.startsWith(PREFIX_CASH_PRIZE)) {
+        continue;
+      }
+
+      int i = Integer.parseInt(path.substring(11));
+      double amount = configRewards.getDouble("cash-prize_" + i);
+
+      arr[i] = amount;
+    }
+
+    return arr;
+  }
+
+  public void setCashPrizes(double[] arr) {
+    for (int i = 0; i < arr.length; i++) {
+      configRewards.set(PREFIX_CASH_PRIZE + i, arr[i]);
+    }
+
+    saveRewards();
+  }
+
+  public boolean isNew1st(CaughtFish fish) {
+    Record record = getRecord(1);
+    return (record == null || record.getLength() < fish.getLength());
+  }
+
+  public void addRecord(OfflinePlayer player, CaughtFish fish) {
+    Record replacedRecord = null;
+    for (Record r : recordList) {
+      if (r.getPlayer() == player) {
+        if (r.getLength() >= fish.getLength()) {
+          return;
         } else {
-            player.getWorld().dropItem(player.getLocation(), stack);
+          replacedRecord = r;
+          break;
         }
+      }
+    }
+    if (replacedRecord != null) {
+      recordList.remove(replacedRecord);
+    }
+    recordList.add(new Record(player.getUniqueId(), fish));
+    recordList.sort(comparator);
+  }
 
-        int number = getNumber(player);
-        String msg = plugin.getFishConfiguration().getString("reward");
+  public Record getRecord(int number) {
+    return ((recordList.size() >= number) ? recordList.get(number - 1) : null);
+  }
 
-        msg = msg.replaceAll("%player%", player.getName())
-                .replaceAll("%item%", getItemName(stack))
-                .replaceAll("%ordinal%", plugin.getOrdinal(number))
-                .replaceAll("%number%", Integer.toString(number));
+  public int getRecordAmount() {
+    return recordList.size();
+  }
 
-        player.sendMessage(msg);
+  public boolean hasRecord(OfflinePlayer player) {
+    for (Record record : recordList) {
+      if (record.getPlayer().equals(player)) {
+        return true;
+      }
     }
 
-    private void sendCashPrize(OfflinePlayer player, double amount) {
-        if (!plugin.getVaultHooker().getEconomy().hasAccount(player)) {
-            plugin.getLogger().info(player.getName() + "'s reward of fishing contest has not been sent as having no economy account.");
-            return;
-        } else {
-            plugin.getVaultHooker().getEconomy().depositPlayer(player, amount);
-        }
+    return false;
+  }
 
-        if (player.isOnline()) {
-            int number = getNumber(player);
-            String msg = plugin.getFishConfiguration().getString("reward-cash-prize");
-
-            msg = msg.replaceAll("%player%", player.getName())
-                    .replaceAll("%amount%", Double.toString(amount))
-                    .replaceAll("%ordinal%", plugin.getOrdinal(number))
-                    .replaceAll("%number%", Integer.toString(number));
-
-            player.getPlayer().sendMessage(msg);
-        }
+  public double getRecordLength(OfflinePlayer player) {
+    for (Record record : recordList) {
+      if (record.getPlayer().equals(player)) {
+        return record.getLength();
+      }
     }
 
-    private String getItemName(ItemStack item) {
-        return ((item.hasItemMeta() && item.getItemMeta().hasDisplayName()) ?
-                item.getItemMeta().getDisplayName() : item.getType().name().toLowerCase().replaceAll("_", " "));
+    return 0.0D;
+  }
+
+  public int getNumber(OfflinePlayer player) {
+    for (int i = 0; i < recordList.size(); i++) {
+      if (recordList.get(i).getPlayer().getUniqueId().equals(player.getUniqueId())) {
+        return (i + 1);
+      }
     }
 
-    public ItemStack[] getRewards() {
-        ItemStack[] rewards = new ItemStack[8];
+    return 0;
+  }
 
-        for (String path : configRewards.getKeys(false)) {
-            if (!path.startsWith(PREFIX_REWARD))
-                continue;
+  public void clearRecords() {
+    recordList.clear();
+  }
 
-            int i = Integer.parseInt(path.substring(7));
-            ItemStack item = configRewards.getItemStack("reward_" + i);
+  private class RecordComparator implements Comparator<Record> {
 
-            rewards[i] = item;
-        }
+    public int compare(Record arg0, Record arg1) {
+      if (arg0.getLength() < arg1.getLength()) {
+        return 1;
+      } else if ((arg0.getLength() > arg1.getLength())) {
+        return -1;
+      }
+      return 0;
+    }
+  }
 
-        return rewards;
+  public class Record {
+
+    private final UUID id;
+    private final String fishName;
+    private final double length;
+
+    public Record(UUID id, CaughtFish fish) {
+      this(id, fish.getName(), fish.getLength());
     }
 
-    public void setRewards(ItemStack[] rewards) {
-        for (int i = 0; i < rewards.length; i++) {
-            configRewards.set(PREFIX_REWARD + i, rewards[i]);
-        }
-
-        saveRewards();
+    public Record(UUID id, String fishName, double length) {
+      this.id = id;
+      this.fishName = fishName;
+      this.length = length;
     }
 
-    public String[] getCmdRewards() {
-        String[] rewards = new String[8];
-
-        for (String path : configRewards.getKeys(false)) {
-            if (!path.startsWith(PREFIX_CMD_REWARD))
-                continue;
-
-            int i = Integer.parseInt(path.substring(4));
-            String cmd = configRewards.getString("cmd_" + i);
-
-            rewards[i] = cmd;
-        }
-
-        return rewards;
+    public OfflinePlayer getPlayer() {
+      return plugin.getServer().getOfflinePlayer(id);
     }
 
-    public void setCmdRewards(String[] rewards) {
-        for (int i = 0; i < rewards.length; i++) {
-            configRewards.set(PREFIX_CMD_REWARD + i, rewards[i]);
-        }
-
-        saveRewards();
+    public String getFishName() {
+      return fishName;
     }
 
-    public double[] getCashPrizes() {
-        double[] arr = new double[8];
+    public double getLength() {
+      return length;
+    }
+  }
 
-        for (String path : configRewards.getKeys(false)) {
-            if (!path.startsWith(PREFIX_CASH_PRIZE))
-                continue;
+  private class TimerTask extends BukkitRunnable {
 
-            int i = Integer.parseInt(path.substring(11));
-            double amount = configRewards.getDouble("cash-prize_" + i);
+    private final long timer;
+    private long passed = 0;
 
-            arr[i] = amount;
-        }
-
-        return arr;
+    public TimerTask(long sec) {
+      this.timer = sec;
     }
 
-    public void setCashPrizes(double[] arr) {
-        for (int i = 0; i < arr.length; i++) {
-            configRewards.set(PREFIX_CASH_PRIZE + i, arr[i]);
-        }
+    public void run() {
+      passed++;
 
-        saveRewards();
+      if (plugin.hasBossBar()) {
+        plugin.getBossBarManager().updateTimerBar(passed, timer);
+      }
+
+      if (passed >= timer) {
+        plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "morefish stop");
+        this.cancel();
+      }
     }
-
-    public boolean isNew1st(CaughtFish fish) {
-        Record record = getRecord(1);
-
-        return (record == null || record.getLength() < fish.getLength());
-    }
-
-    public void addRecord(OfflinePlayer player, CaughtFish fish) {
-        Record replacedRecord = null;
-        for (Record r : recordList) {
-            if (r.getPlayer() == player) {
-                if (r.getLength() >= fish.getLength()) {
-                    return;
-                } else {
-                    replacedRecord = r;
-                    break;
-                }
-            }
-        }
-        if (replacedRecord != null) {
-            recordList.remove(replacedRecord);
-        }
-        recordList.add(new Record(player.getUniqueId(), fish));
-        recordList.sort(comparator);
-    }
-
-    public Record getRecord(int number) {
-        return ((recordList.size() >= number) ? recordList.get(number - 1) : null);
-    }
-
-    public int getRecordAmount() {
-        return recordList.size();
-    }
-
-    public boolean hasRecord(OfflinePlayer player) {
-        for (Record record : recordList) {
-            if (record.getPlayer().equals(player)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public double getRecordLength(OfflinePlayer player) {
-        for (Record record : recordList) {
-            if (record.getPlayer().equals(player)) {
-                return record.getLength();
-            }
-        }
-
-        return 0.0D;
-    }
-
-    public int getNumber(OfflinePlayer player) {
-        for (int i = 0; i < recordList.size(); i++) {
-            if (recordList.get(i).getPlayer().getUniqueId().equals(player.getUniqueId())) {
-                return (i + 1);
-            }
-        }
-
-        return 0;
-    }
-
-    public void clearRecords() {
-        recordList.clear();
-    }
-
-    private class RecordComparator implements Comparator<Record> {
-
-        public int compare(Record arg0, Record arg1) {
-            if (arg0.getLength() < arg1.getLength())
-                return 1;
-            else if ((arg0.getLength() > arg1.getLength()))
-                return -1;
-            return 0;
-        }
-    }
-
-    public class Record {
-        private final UUID id;
-        private final String fishName;
-        private final double length;
-
-        public Record(UUID id, CaughtFish fish) {
-            this(id, fish.getName(), fish.getLength());
-        }
-
-        public Record(UUID id, String fishName, double length) {
-            this.id = id;
-            this.fishName = fishName;
-            this.length = length;
-        }
-
-        public OfflinePlayer getPlayer() {
-            return plugin.getServer().getOfflinePlayer(id);
-        }
-
-        public String getFishName() {
-            return fishName;
-        }
-
-        public double getLength() {
-            return length;
-        }
-    }
-
-    private class TimerTask extends BukkitRunnable {
-        private final long timer;
-        private long passed = 0;
-
-        public TimerTask(long sec) {
-            this.timer = sec;
-        }
-
-        public void run() {
-            passed++;
-
-            if (plugin.hasBossBar()) {
-                plugin.getBossBarManager().updateTimerBar(passed, timer);
-            }
-
-            if (passed >= timer) {
-                plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "morefish stop");
-                this.cancel();
-            }
-        }
-    }
+  }
 }
