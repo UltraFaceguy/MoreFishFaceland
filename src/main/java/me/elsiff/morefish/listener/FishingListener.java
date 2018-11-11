@@ -30,8 +30,10 @@ public class FishingListener implements Listener {
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void onFish(PlayerFishEvent event) {
-    if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH && event.getCaught() instanceof Item) {
-      if (!contest.hasStarted() && plugin.getConfig().getBoolean("general.no-fishing-unless-contest")) {
+    if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH && event
+        .getCaught() instanceof Item) {
+      if (!contest.hasStarted() && plugin.getConfig()
+          .getBoolean("general.no-fishing-unless-contest")) {
         event.setCancelled(true);
 
         String msg = plugin.getFishConfiguration().getString("no-fishing-allowed");
@@ -82,12 +84,12 @@ public class FishingListener implements Listener {
 
     boolean new1st = contest.hasStarted() && contest.isNew1st(fish);
 
-      if (fish.getRarity().hasFirework()) {
-        launchFirework(catcher.getLocation().add(0, 1, 0));
-      }
-      if (!fish.getCommands().isEmpty()) {
-        executeCommands(catcher, fish);
-      }
+    if (fish.getRarity().hasFirework()) {
+      launchFirework(catcher.getLocation().add(0, 1, 0));
+    }
+    if (!fish.getCommands().isEmpty()) {
+      executeCommands(catcher, fish);
+    }
 
     if (contest.hasStarted()) {
       contest.addRecord(catcher, fish);
@@ -131,7 +133,8 @@ public class FishingListener implements Listener {
         .replaceAll("%rarity_color%", fish.getRarity().getColor() + "")
         .replaceAll("%fish%", fish.getName())
         .replaceAll("%fish_with_rarity%",
-            ((fish.getRarity().isNoDisplay()) ? "" : fish.getRarity().getDisplayName() + " ") + fish.getName());
+            ((fish.getRarity().isNoDisplay()) ? "" : fish.getRarity().getDisplayName() + " ") + fish
+                .getName());
 
     message = ChatColor.translateAlternateColorCodes('&', message);
 
@@ -158,7 +161,8 @@ public class FishingListener implements Listener {
     }
 
     if (plugin.getConfig().getBoolean("messages.only-announce-fishing-rod")) {
-      players.removeIf(player -> player.getInventory().getItemInMainHand().getType() != Material.FISHING_ROD);
+      players.removeIf(
+          player -> player.getInventory().getItemInMainHand().getType() != Material.FISHING_ROD);
     }
 
     return players;
