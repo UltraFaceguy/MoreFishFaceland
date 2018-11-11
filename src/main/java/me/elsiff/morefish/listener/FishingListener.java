@@ -116,7 +116,7 @@ public class FishingListener implements Listener {
     getMessageReceivers(ancFish, catcher)
         .forEach(player -> player.sendMessage(msgFish));
 
-    if (new1st) {
+    if (new1st && fish.getCatcher() != contest.getRecord(1).getPlayer()) {
       getMessageReceivers(ancContest, catcher)
           .forEach(player -> player.sendMessage(msgContest));
     }
