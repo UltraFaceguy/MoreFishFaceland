@@ -1,8 +1,9 @@
 package me.elsiff.morefish.manager;
 
-import info.faceland.strife.util.PlayerDataUtil;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import land.face.strife.data.champion.LifeSkillType;
+import land.face.strife.util.PlayerDataUtil;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.MoreFish;
@@ -65,7 +66,8 @@ public class FishManager {
       boolean noDisplay = rarities.getBoolean(path + ".no-display");
       boolean firework = rarities.getBoolean(path + ".firework", false);
 
-      Rarity rarity = new Rarity(path, displayName, weight, bonusWeight, color, additionalPrice, noBroadcast, noDisplay, firework);
+      Rarity rarity = new Rarity(path, displayName, weight, bonusWeight, color, additionalPrice,
+          noBroadcast, noDisplay, firework);
 
       rarityList.add(rarity);
     }
@@ -75,7 +77,8 @@ public class FishManager {
     List<Rarity> invalidRarities = new ArrayList<>();
     for (Rarity rarity : rarityList) {
       List<CustomFish> fishList = new ArrayList<>();
-      ConfigurationSection section = config.getConfigurationSection("fish-list." + rarity.getName().toLowerCase());
+      ConfigurationSection section = config
+          .getConfigurationSection("fish-list." + rarity.getName().toLowerCase());
       if (section == null) {
         plugin.getLogger().severe("No section/fish found for rarity " + rarity.getName() + "!");
         invalidRarities.add(rarity);
@@ -196,7 +199,8 @@ public class FishManager {
     }
 
     if (itemStack == null || itemStack.getItemMeta() == null) {
-      plugin.getLogger().severe("Item found at section '" + section + "' path '" + path +"' is invalid!");
+      plugin.getLogger()
+          .severe("Item found at section '" + section + "' path '" + path + "' is invalid!");
     }
     return itemStack;
   }
@@ -262,7 +266,8 @@ public class FishManager {
   public CaughtFish generateRandomFish(Player catcher) {
     // TODO: Only set level if strife is loaded
     double rodLuck = getLuckFromPlayer(catcher);
-    Rarity rarity = getRandomRarity(PlayerDataUtil.getFishSkill(catcher, true), rodLuck);
+    Rarity rarity = getRandomRarity(
+        PlayerDataUtil.getEffectiveLifeSkill(catcher, LifeSkillType.FISHING, true), rodLuck);
     CustomFish type = getRandomFish(rarity, catcher);
     return createCaughtFish(type, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
   }
@@ -424,7 +429,7 @@ public class FishManager {
 
   private List<Biome> getBiomes(String[] values) {
     List<Biome> biomes = new ArrayList<>();
-    for (int i=1; values.length < i; i++) {
+    for (int i = 1; values.length < i; i++) {
       try {
         biomes.add(Biome.valueOf(values[i].toUpperCase()));
       } catch (Exception e) {

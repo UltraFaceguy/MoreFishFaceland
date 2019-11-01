@@ -1,17 +1,19 @@
 package me.elsiff.morefish.condition;
 
-import info.faceland.strife.util.PlayerDataUtil;
+import land.face.strife.data.champion.LifeSkillType;
+import land.face.strife.util.PlayerDataUtil;
 import org.bukkit.entity.Player;
 
 public class FishingSkillCondition implements Condition {
-    private final int level;
 
-    public FishingSkillCondition(int level) {
-        this.level = level;
-    }
+  private final int level;
 
-    @Override
-    public boolean isSatisfying(Player player) {
-        return PlayerDataUtil.getFishLevel(player) >= level;
-    }
+  public FishingSkillCondition(int level) {
+    this.level = level;
+  }
+
+  @Override
+  public boolean isSatisfying(Player player) {
+    return PlayerDataUtil.getLifeSkillLevel(player, LifeSkillType.FISHING) >= level;
+  }
 }

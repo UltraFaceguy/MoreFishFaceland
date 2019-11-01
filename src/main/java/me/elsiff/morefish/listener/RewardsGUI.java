@@ -15,189 +15,195 @@ import org.bukkit.inventory.ItemStack;
 import java.util.*;
 
 public class RewardsGUI implements Listener {
-    private final MoreFish plugin;
-    private final Set<UUID> users = new HashSet<>();
-    private final Map<UUID, Integer> editors = new HashMap<>();
 
-    public RewardsGUI(MoreFish plugin) {
-        this.plugin = plugin;
+  private final MoreFish plugin;
+  private final Set<UUID> users = new HashSet<>();
+  private final Map<UUID, Integer> editors = new HashMap<>();
+
+  public RewardsGUI(MoreFish plugin) {
+    this.plugin = plugin;
+  }
+
+  public void openGUI(Player player) {
+    String title = plugin.getFishConfiguration().getString("rewards-gui-title");
+    Inventory inv = plugin.getServer()
+        .createInventory(player, (plugin.hasEconomy() ? 27 : 18), title);
+
+    ItemStack[] rewards = plugin.getContestManager().getRewards();
+
+    for (int i = 0; i < 8 && i < rewards.length; i++) {
+      inv.setItem(i, rewards[i]);
     }
 
-    public void openGUI(Player player) {
-        String title = plugin.getFishConfiguration().getString("rewards-gui-title");
-        Inventory inv = plugin.getServer().createInventory(player, (plugin.hasEconomy() ? 27 : 18), title);
+    ItemStack iconGuide = new ItemBuilder(Material.OAK_SIGN)
+        .setDisplayName(plugin.getFishConfiguration().getString("rewards-guide-icon-name"))
+        .setLore(plugin.getFishConfiguration().getStringList("rewards-guide-icon-lore"))
+        .build();
 
-        ItemStack[] rewards = plugin.getContestManager().getRewards();
+    inv.setItem(8, iconGuide);
 
-        for (int i = 0; i < 8 && i < rewards.length; i ++) {
-            inv.setItem(i, rewards[i]);
+    String[] cmdPrizes = plugin.getContestManager().getCmdRewards();
+
+    for (int i = 0; i < 8 && i < cmdPrizes.length; i++) {
+      String ordinal = plugin.getOrdinal(i + 1);
+      String number = Integer.toString(i + 1);
+
+      ItemStack iconCommand = new ItemBuilder(Material.COMMAND_BLOCK)
+          .setDisplayName(plugin.getFishConfiguration().getString("rewards-cmd-icon-name")
+              .replaceAll("%ordinal%", ordinal)
+              .replaceAll("%number%", number))
+          .setLore(plugin.getFishConfiguration().getStringList("rewards-cmd-icon-lore"))
+          .build();
+      inv.setItem(9 + i, iconCommand);
+    }
+
+    ItemStack iconCmdGuide = new ItemBuilder(Material.OAK_SIGN)
+        .setDisplayName(plugin.getFishConfiguration().getString("rewards-sign-icon-name"))
+        .setLore(plugin.getFishConfiguration().getStringList("rewards-sign-icon-lore"))
+        .build();
+
+    inv.setItem(17, iconCmdGuide);
+
+    if (plugin.hasEconomy()) {
+      double[] cashPrizes = plugin.getContestManager().getCashPrizes();
+
+      for (int i = 0; i < 8; i++) {
+        double amount = cashPrizes[i];
+
+        String ordinal = plugin.getOrdinal(i + 1);
+        String number = Integer.toString(i + 1);
+
+        if (i == 7) {
+          String text = plugin.getFishConfiguration().getString("rewards-consolation");
+          ordinal = text;
+          number = text;
         }
 
-        ItemStack iconGuide = new ItemBuilder(Material.SIGN)
-                .setDisplayName(plugin.getFishConfiguration().getString("rewards-guide-icon-name"))
-                .setLore(plugin.getFishConfiguration().getStringList("rewards-guide-icon-lore"))
-                .build();
-
-        inv.setItem(8, iconGuide);
-
-        String[] cmdPrizes = plugin.getContestManager().getCmdRewards();
-
-        for (int i = 0; i < 8 && i < cmdPrizes.length; i ++) {
-            String ordinal = plugin.getOrdinal(i + 1);
-            String number = Integer.toString(i + 1);
-
-            ItemStack iconCommand = new ItemBuilder(Material.COMMAND)
-                .setDisplayName(plugin.getFishConfiguration().getString("rewards-cmd-icon-name")
-                    .replaceAll("%ordinal%", ordinal)
-                    .replaceAll("%number%", number))
-                .setLore(plugin.getFishConfiguration().getStringList("rewards-cmd-icon-lore"))
-                .build();
-            inv.setItem(9 + i, iconCommand);
-        }
-
-        ItemStack iconCmdGuide = new ItemBuilder(Material.SIGN)
-            .setDisplayName(plugin.getFishConfiguration().getString("rewards-sign-icon-name"))
-            .setLore(plugin.getFishConfiguration().getStringList("rewards-sign-icon-lore"))
+        ItemStack iconEmerald = new ItemBuilder(Material.EMERALD)
+            .setDisplayName(plugin.getFishConfiguration().getString("rewards-emerald-icon-name")
+                .replaceAll("%ordinal%", ordinal)
+                .replaceAll("%number%", number)
+                .replaceAll("%amount%", Double.toString(amount)))
+            .setLore(plugin.getFishConfiguration().getStringList("rewards-emerald-icon-lore"))
             .build();
 
-        inv.setItem(17, iconCmdGuide);
+        inv.setItem(18 + i, iconEmerald);
+      }
 
-        if (plugin.hasEconomy()) {
-            double[] cashPrizes = plugin.getContestManager().getCashPrizes();
+      ItemStack iconMoneyGuide = new ItemBuilder(Material.OAK_SIGN)
+          .setDisplayName(plugin.getFishConfiguration().getString("rewards-sign-icon-name"))
+          .setLore(plugin.getFishConfiguration().getStringList("rewards-sign-icon-lore"))
+          .build();
 
-            for (int i = 0; i < 8; i ++) {
-                double amount = cashPrizes[i];
-
-                String ordinal = plugin.getOrdinal(i + 1);
-                String number = Integer.toString(i + 1);
-
-                if (i == 7) {
-                    String text = plugin.getFishConfiguration().getString("rewards-consolation");
-                    ordinal = text;
-                    number = text;
-                }
-
-                ItemStack iconEmerald = new ItemBuilder(Material.EMERALD)
-                        .setDisplayName(plugin.getFishConfiguration().getString("rewards-emerald-icon-name")
-                                .replaceAll("%ordinal%", ordinal)
-                                .replaceAll("%number%", number)
-                                .replaceAll("%amount%", Double.toString(amount)))
-                        .setLore(plugin.getFishConfiguration().getStringList("rewards-emerald-icon-lore"))
-                        .build();
-
-                inv.setItem(18 + i, iconEmerald);
-            }
-
-            ItemStack iconMoneyGuide = new ItemBuilder(Material.SIGN)
-                    .setDisplayName(plugin.getFishConfiguration().getString("rewards-sign-icon-name"))
-                    .setLore(plugin.getFishConfiguration().getStringList("rewards-sign-icon-lore"))
-                    .build();
-
-            inv.setItem(26, iconMoneyGuide);
-        }
-
-        player.openInventory(inv);
-        users.add(player.getUniqueId());
+      inv.setItem(26, iconMoneyGuide);
     }
 
-    @EventHandler
-    public void onClick(InventoryClickEvent event) {
-        if (users.contains(event.getWhoClicked().getUniqueId())) {
-            if (event.getRawSlot() < 9 || event.getInventory().getSize() < event.getRawSlot()) {
-                return;
-            }
+    player.openInventory(inv);
+    users.add(player.getUniqueId());
+  }
 
-            event.setCancelled(true);
+  @EventHandler
+  public void onClick(InventoryClickEvent event) {
+    if (users.contains(event.getWhoClicked().getUniqueId())) {
+      if (event.getRawSlot() < 9 || event.getInventory().getSize() < event.getRawSlot()) {
+        return;
+      }
 
-            if (9 <= event.getRawSlot() && event.getRawSlot() <= 16) {
-                editors.put(event.getWhoClicked().getUniqueId(), event.getRawSlot() - 9);
+      event.setCancelled(true);
 
-                event.getWhoClicked().closeInventory();
+      if (9 <= event.getRawSlot() && event.getRawSlot() <= 16) {
+        editors.put(event.getWhoClicked().getUniqueId(), event.getRawSlot() - 9);
 
-                for (String msg : plugin.getFishConfiguration().getStringList("enter-cmd-prize")) {
-                    event.getWhoClicked().sendMessage(msg);
-                }
-            }
+        event.getWhoClicked().closeInventory();
 
-            if (18 <= event.getRawSlot() && event.getRawSlot() <= 25 && plugin.hasEconomy()) {
-                editors.put(event.getWhoClicked().getUniqueId(), event.getRawSlot() - 9);
-
-                event.getWhoClicked().closeInventory();
-
-                for (String msg : plugin.getFishConfiguration().getStringList("enter-cash-prize")) {
-                    event.getWhoClicked().sendMessage(msg);
-                }
-            }
+        for (String msg : plugin.getFishConfiguration().getStringList("enter-cmd-prize")) {
+          event.getWhoClicked().sendMessage(msg);
         }
-    }
+      }
 
-    @EventHandler
-    public void onChat(AsyncPlayerChatEvent event) {
-        UUID id = event.getPlayer().getUniqueId();
+      if (18 <= event.getRawSlot() && event.getRawSlot() <= 25 && plugin.hasEconomy()) {
+        editors.put(event.getWhoClicked().getUniqueId(), event.getRawSlot() - 9);
 
-        if (editors.containsKey(id)) {
-            event.setCancelled(true);
+        event.getWhoClicked().closeInventory();
 
-            if ("cancel".equalsIgnoreCase(event.getMessage())) {
-                editors.remove(id);
-                openGUI(event.getPlayer());
-
-                event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-cancel"));
-                return;
-            }
-
-            int index = editors.get(id);
-
-            if (index >= 18 && index <= 26) {
-                double value;
-                try {
-                    value = Double.parseDouble(event.getMessage());
-                } catch (NumberFormatException ex) {
-                    event.getPlayer().sendMessage(
-                        String.format(plugin.getFishConfiguration().getString("entered-not-number"), event.getMessage()));
-                    return;
-                }
-
-                if (value < 0) {
-                    event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-not-positive"));
-                    return;
-                }
-                double[] cashPrizes = plugin.getContestManager().getCashPrizes();
-                cashPrizes[index] = value;
-                plugin.getContestManager().setCashPrizes(cashPrizes);
-            } else {
-                String[] cmdPrizes = plugin.getContestManager().getCmdRewards();
-                cmdPrizes[index] = event.getMessage();
-                plugin.getContestManager().setCmdRewards(cmdPrizes);
-            }
-            editors.remove(id);
-            openGUI(event.getPlayer());
-
-            event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-successfully"));
+        for (String msg : plugin.getFishConfiguration().getStringList("enter-cash-prize")) {
+          event.getWhoClicked().sendMessage(msg);
         }
+      }
     }
+  }
 
-    @EventHandler
-    public void onClose(InventoryCloseEvent event) {
-        if (users.contains(event.getPlayer().getUniqueId())) {
-            users.remove(event.getPlayer().getUniqueId());
+  @EventHandler
+  public void onChat(AsyncPlayerChatEvent event) {
+    UUID id = event.getPlayer().getUniqueId();
 
-            ItemStack[] rewards = new ItemStack[8];
+    if (editors.containsKey(id)) {
+      event.setCancelled(true);
 
-            for (int i = 0; i < 8; i ++) {
-                ItemStack stack = event.getInventory().getItem(i);
+      if ("cancel".equalsIgnoreCase(event.getMessage())) {
+        editors.remove(id);
+        openGUI(event.getPlayer());
 
-                if (stack == null || stack.getType() == Material.AIR)
-                    continue;
+        event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("entered-cancel"));
+        return;
+      }
 
-                rewards[i] = stack;
-            }
+      int index = editors.get(id);
 
-            plugin.getContestManager().setRewards(rewards);
-
-            if (!editors.containsKey(event.getPlayer().getUniqueId())) {
-                event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("saved-changes"));
-            }
+      if (index >= 18 && index <= 26) {
+        double value;
+        try {
+          value = Double.parseDouble(event.getMessage());
+        } catch (NumberFormatException ex) {
+          event.getPlayer().sendMessage(
+              String.format(plugin.getFishConfiguration().getString("entered-not-number"),
+                  event.getMessage()));
+          return;
         }
+
+        if (value < 0) {
+          event.getPlayer()
+              .sendMessage(plugin.getFishConfiguration().getString("entered-not-positive"));
+          return;
+        }
+        double[] cashPrizes = plugin.getContestManager().getCashPrizes();
+        cashPrizes[index] = value;
+        plugin.getContestManager().setCashPrizes(cashPrizes);
+      } else {
+        String[] cmdPrizes = plugin.getContestManager().getCmdRewards();
+        cmdPrizes[index] = event.getMessage();
+        plugin.getContestManager().setCmdRewards(cmdPrizes);
+      }
+      editors.remove(id);
+      openGUI(event.getPlayer());
+
+      event.getPlayer()
+          .sendMessage(plugin.getFishConfiguration().getString("entered-successfully"));
     }
+  }
+
+  @EventHandler
+  public void onClose(InventoryCloseEvent event) {
+    if (users.contains(event.getPlayer().getUniqueId())) {
+      users.remove(event.getPlayer().getUniqueId());
+
+      ItemStack[] rewards = new ItemStack[8];
+
+      for (int i = 0; i < 8; i++) {
+        ItemStack stack = event.getInventory().getItem(i);
+
+        if (stack == null || stack.getType() == Material.AIR) {
+          continue;
+        }
+
+        rewards[i] = stack;
+      }
+
+      plugin.getContestManager().setRewards(rewards);
+
+      if (!editors.containsKey(event.getPlayer().getUniqueId())) {
+        event.getPlayer().sendMessage(plugin.getFishConfiguration().getString("saved-changes"));
+      }
+    }
+  }
 }

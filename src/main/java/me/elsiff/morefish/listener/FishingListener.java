@@ -63,8 +63,10 @@ public class FishingListener implements Listener {
     }
 
     // Check if the caught is fish
-    return (!plugin.getConfig().getBoolean("general.replace-only-fish") ||
-        ((Item) event.getCaught()).getItemStack().getType() == Material.RAW_FISH);
+    Material caughtMaterial = ((Item) event.getCaught()).getItemStack().getType();
+    return !plugin.getConfig().getBoolean("general.replace-only-fish") ||
+        caughtMaterial == Material.TROPICAL_FISH || caughtMaterial == Material.COD
+        || caughtMaterial == Material.PUFFERFISH || caughtMaterial == Material.SALMON;
   }
 
   private void executeFishingActions(Player catcher, PlayerFishEvent event) {
@@ -82,7 +84,12 @@ public class FishingListener implements Listener {
       plugin.getStrifeHooker().addFishingExperience(catcher, xp);
     }
 
-    boolean new1st = contest.hasStarted() && contest.isNew1st(fish);
+    boolean topFish = contest.hasStarted() && contest.isNew1st(fish);
+    boolean newFirst = false;
+    if (topFish) {
+      newFirst = contest.getRecord(1) == null ||
+          contest.getRecord(1).getPlayer() != fish.getCatcher();
+    }
 
     if (fish.getRarity().hasFirework()) {
       launchFirework(catcher.getLocation().add(0, 1, 0));
@@ -90,16 +97,15 @@ public class FishingListener implements Listener {
     if (!fish.getCommands().isEmpty()) {
       executeCommands(catcher, fish);
     }
-
     if (contest.hasStarted()) {
       contest.addRecord(catcher, fish);
     }
 
+    announceMessages(catcher, fish, newFirst);
+
     ItemStack itemStack = plugin.getFishManager().getItemStack(fish, event.getPlayer().getName());
     Item caught = (Item) event.getCaught();
     caught.setItemStack(itemStack);
-
-    announceMessages(catcher, fish, new1st);
   }
 
   private void announceMessages(Player catcher, CaughtFish fish, boolean new1st) {
@@ -118,7 +124,7 @@ public class FishingListener implements Listener {
     getMessageReceivers(ancFish, catcher)
         .forEach(player -> player.sendMessage(msgFish));
 
-    if (new1st && fish.getCatcher() != contest.getRecord(1).getPlayer()) {
+    if (new1st) {
       getMessageReceivers(ancContest, catcher)
           .forEach(player -> player.sendMessage(msgContest));
     }

@@ -1,6 +1,6 @@
 package me.elsiff.morefish;
 
-import info.faceland.strife.StrifePlugin;
+import land.face.strife.StrifePlugin;
 import me.elsiff.morefish.command.GeneralCommands;
 import me.elsiff.morefish.hooker.*;
 import me.elsiff.morefish.listener.*;

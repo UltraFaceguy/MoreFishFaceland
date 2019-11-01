@@ -1,6 +1,7 @@
 package me.elsiff.morefish.hooker;
 
-import info.faceland.strife.StrifePlugin;
+import land.face.strife.StrifePlugin;
+import land.face.strife.data.champion.LifeSkillType;
 import org.bukkit.entity.Player;
 
 public class StrifeHooker {
@@ -12,6 +13,7 @@ public class StrifeHooker {
   }
 
   public void addFishingExperience(Player player, double amount) {
-    strifePlugin.getFishExperienceManager().addExperience(player, amount, false);
+    strifePlugin.getSkillExperienceManager()
+        .addExperience(player, LifeSkillType.FISHING, amount, false);
   }
 }
