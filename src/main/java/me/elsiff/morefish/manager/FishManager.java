@@ -20,6 +20,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.potion.PotionEffectType;
@@ -142,12 +143,12 @@ public class FishManager {
   }
 
   private ItemStack getIcon(ConfigurationSection section, String path) {
-    ItemStack itemStack;
-
-    String id = section.getString(path + ".icon.id");
-    Material material = IdentityUtils.getMaterial(id);
-    if (material == null) {
-      plugin.getLogger().warning("'" + id + "' is invalid item id!");
+    String id = section.getString(path + ".icon.id", "");
+    Material material;
+    try {
+      material = Material.valueOf(id);
+    } catch (Exception e) {
+      plugin.getLogger().warning("Fish: " + path + " | Invalid Material: " + id);
       return null;
     }
 
@@ -161,7 +162,10 @@ public class FishManager {
       durability = (short) section.getInt(path + ".icon.durability");
     }
 
-    itemStack = new ItemStack(material, amount, durability);
+    ItemStack itemStack = new ItemStack(material, amount);
+    if (itemStack.getItemMeta() instanceof Damageable) {
+      ((Damageable) itemStack.getItemMeta()).setDamage(durability);
+    }
     ItemMeta meta = itemStack.getItemMeta();
 
     if (section.contains(path + ".icon.lore")) {

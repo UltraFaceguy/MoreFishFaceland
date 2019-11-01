@@ -19,6 +19,19 @@ general:
   replace-only-fish: false
   save-records: false
 
+treasure:
+  chance: 0.001
+  chance-per-skill: 0.001
+  loot-items:
+    item-rarity-bonus: 500
+    min-tier-items: 2
+    max-tier-items: 5
+    min-gems: 1
+    max-gems: 10
+    custom-items:
+      reeee: 0.2
+      itemName2: 0.1
+
 auto-running:
   enable: false
   required-players: 5

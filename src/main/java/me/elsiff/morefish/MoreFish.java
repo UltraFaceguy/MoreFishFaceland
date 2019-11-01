@@ -37,6 +37,7 @@ public class MoreFish extends JavaPlugin {
   private PlaceholderAPIHooker placeholderAPIHooker;
   private WorldGuardHooker worldGuardHooker;
   private StrifeHooker strifeHooker;
+  private LootHooker lootHooker;
 
   public static void setInstance(MoreFish moreFish) {
     instance = moreFish;
@@ -98,9 +99,15 @@ public class MoreFish extends JavaPlugin {
       worldGuardHooker = new WorldGuardHooker();
       getLogger().info("Found WorldGuard for regions support.");
     }
+
     if (manager.getPlugin("Strife") != null && manager.getPlugin("Strife").isEnabled()) {
       strifeHooker = new StrifeHooker((StrifePlugin) manager.getPlugin("Strife"));
-      getLogger().info("Found WorldGuard for regions support.");
+      getLogger().info("Found Strife for fishXP support.");
+    }
+
+    if (manager.getPlugin("Loot") != null && manager.getPlugin("Loot").isEnabled()) {
+      lootHooker = new LootHooker();
+      getLogger().info("Found Loot for treasure support.");
     }
 
     loadFishShop();
@@ -169,6 +176,9 @@ public class MoreFish extends JavaPlugin {
 
   @Override
   public void onDisable() {
+
+    getServer().getScheduler().cancelTask(taskId);
+
     if (getConfig().getBoolean("general.save-records")) {
       contestManager.saveRecords();
     }
@@ -269,5 +279,9 @@ public class MoreFish extends JavaPlugin {
 
   public StrifeHooker getStrifeHooker() {
     return strifeHooker;
+  }
+
+  public LootHooker getLootHooker() {
+    return lootHooker;
   }
 }

@@ -1,10 +1,16 @@
 package me.elsiff.morefish.listener;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import land.face.strife.data.champion.LifeSkillType;
+import land.face.strife.util.PlayerDataUtil;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
 import me.elsiff.morefish.manager.ContestManager;
 import org.bukkit.*;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -13,6 +19,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 import java.util.HashSet;
@@ -23,9 +30,27 @@ public class FishingListener implements Listener {
   private final MoreFish plugin;
   private final ContestManager contest;
 
+  private double treasureChance;
+  private double treasurePerLevel;
+  private int minTreasureGems;
+  private int maxTreasureGems;
+  private int minTreasureTierItems;
+  private int maxTreasureTierItems;
+  private double tierRarityBonus;
+
+  private Random random = new Random();
+
   public FishingListener(MoreFish plugin) {
     this.plugin = plugin;
     this.contest = plugin.getContestManager();
+
+    this.treasureChance = plugin.getConfig().getDouble("treasure.chance");
+    this.treasurePerLevel = plugin.getConfig().getDouble("treasure.chance-per-skill");
+    this.minTreasureGems = plugin.getConfig().getInt("treasure.loot-items.min-gems", 0);
+    this.maxTreasureGems = plugin.getConfig().getInt("treasure.loot-items.max-gems", 2);
+    this.minTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.min-tier-items", 0);
+    this.maxTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.max-tier-items", 2);
+    this.tierRarityBonus = plugin.getConfig().getInt("treasure.loot-items.item-rarity-bonus", 9000);
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -70,6 +95,12 @@ public class FishingListener implements Listener {
   }
 
   private void executeFishingActions(Player catcher, PlayerFishEvent event) {
+    if (treasureChance + treasurePerLevel * PlayerDataUtil.getEffectiveLifeSkill(
+        catcher, LifeSkillType.FISHING, true) > Math.random()) {
+      Item caught = (Item) event.getCaught();
+      caught.setItemStack(buildTreasure(catcher));
+      return;
+    }
     CaughtFish fish = plugin.getFishManager().generateRandomFish(catcher);
 
     PlayerCatchCustomFishEvent customEvent = new PlayerCatchCustomFishEvent(catcher, fish, event);
@@ -199,5 +230,50 @@ public class FishingListener implements Listener {
     meta.addEffect(effect);
     meta.setPower(1);
     firework.setFireworkMeta(meta);
+  }
+
+  private ItemStack buildTreasure(Player player) {
+    ItemStack item = new ItemStack(Material.SHULKER_BOX);
+    if (item.getItemMeta() instanceof BlockStateMeta) {
+      BlockStateMeta im = (BlockStateMeta) item.getItemMeta();
+      if (im.getBlockState() instanceof ShulkerBox) {
+        ShulkerBox shulker = (ShulkerBox) im.getBlockState();
+        ItemStack[] stacks = new ItemStack[27];
+        Set<Integer> freeSlots = getFreeSpace(stacks);
+        for (ItemStack stack : getLootItems(player)) {
+          if (freeSlots.isEmpty()) {
+            break;
+          }
+          int slot = new Random().nextInt(freeSlots.size());
+          stacks[slot] = stack;
+          freeSlots.remove(slot);
+        }
+        shulker.getInventory().setContents(stacks);
+        im.setBlockState(shulker);
+        item.setItemMeta(im);
+      }
+    }
+    return item;
+  }
+
+  private List<ItemStack> getLootItems(Player player) {
+    List<ItemStack> items = new ArrayList<>();
+    items.addAll(plugin.getLootHooker().getGems(minTreasureGems +
+        random.nextInt(maxTreasureGems - minTreasureGems + 1)));
+    items.addAll(plugin.getLootHooker().getTierItems(minTreasureTierItems +
+        random.nextInt(maxTreasureTierItems - minTreasureTierItems + 1), player.getLevel(),
+        tierRarityBonus));
+    items.addAll(plugin.getLootHooker().getCustomItems());
+    return items;
+  }
+
+  private Set<Integer> getFreeSpace(ItemStack[] slots) {
+    Set<Integer> openSlots = new HashSet<>();
+    for (int i = 0; i < slots.length; i++) {
+      if (slots[i] == null || slots[i].getType() == Material.AIR) {
+        openSlots.add(i);
+      }
+    }
+    return openSlots;
   }
 }
