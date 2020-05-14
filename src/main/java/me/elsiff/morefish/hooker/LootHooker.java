@@ -1,17 +1,17 @@
 package me.elsiff.morefish.hooker;
 
 import info.faceland.loot.LootPlugin;
+import info.faceland.loot.api.items.CustomItem;
 import info.faceland.loot.api.items.ItemGenerationReason;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import org.bukkit.Bukkit;
 import org.bukkit.inventory.ItemStack;
 
 public class LootHooker {
 
-  private Map<String, Double> customItemMap = new HashMap<>();
   private Random random = new Random();
 
   public List<ItemStack> getGems(int amount) {
@@ -33,18 +33,23 @@ public class LootHooker {
           .withLevel(Math.max(1, Math.min(level - 2 + random.nextInt(5), 100)))
           .withItemGenerationReason(ItemGenerationReason.EXTERNAL)
           .withSpecialStat(false)
-          .build());
+          .build().getStack());
       amount--;
     }
     return items;
   }
 
-  public List<ItemStack> getCustomItems() {
+  public List<ItemStack> getCustomItems(Map<String, Double> customChances) {
     List<ItemStack> items = new ArrayList<>();
-    for (String customId : customItemMap.keySet()) {
-      if (customItemMap.get(customId) > Math.random()) {
-        items.add(LootPlugin.getInstance().getCustomItemManager()
-            .getCustomItem(customId).toItemStack(1));
+    for (String customId : customChances.keySet()) {
+      if (customChances.get(customId) > Math.random()) {
+        CustomItem ci = LootPlugin.getInstance().getCustomItemManager().getCustomItem(customId);
+        if (ci != null) {
+          items.add(LootPlugin.getInstance().getCustomItemManager().getCustomItem(customId)
+              .toItemStack(1));
+        } else {
+          Bukkit.getLogger().warning("Invalid custom item id in treasures: " + customId);
+        }
       }
     }
     return items;

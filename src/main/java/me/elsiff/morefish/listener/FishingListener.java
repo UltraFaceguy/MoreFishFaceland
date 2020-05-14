@@ -1,16 +1,25 @@
 package me.elsiff.morefish.listener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import land.face.strife.data.champion.LifeSkillType;
 import land.face.strife.util.PlayerDataUtil;
-import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
 import me.elsiff.morefish.manager.ContestManager;
-import org.bukkit.*;
+import me.elsiff.morefish.pojo.CaughtFish;
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.ShulkerBox;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -21,9 +30,6 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
-
-import java.util.HashSet;
-import java.util.Set;
 
 public class FishingListener implements Listener {
 
@@ -37,20 +43,28 @@ public class FishingListener implements Listener {
   private int minTreasureTierItems;
   private int maxTreasureTierItems;
   private double tierRarityBonus;
+  private Map<String, Double> customItemChances;
 
   private Random random = new Random();
 
   public FishingListener(MoreFish plugin) {
     this.plugin = plugin;
-    this.contest = plugin.getContestManager();
+    contest = plugin.getContestManager();
+    treasureChance = plugin.getConfig().getDouble("treasure.chance");
+    treasurePerLevel = plugin.getConfig().getDouble("treasure.chance-per-skill");
+    minTreasureGems = plugin.getConfig().getInt("treasure.loot-items.min-gems", 0);
+    maxTreasureGems = plugin.getConfig().getInt("treasure.loot-items.max-gems", 2);
+    minTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.min-tier-items", 0);
+    maxTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.max-tier-items", 2);
+    tierRarityBonus = plugin.getConfig().getInt("treasure.loot-items.item-rarity-bonus", 9000);
 
-    this.treasureChance = plugin.getConfig().getDouble("treasure.chance");
-    this.treasurePerLevel = plugin.getConfig().getDouble("treasure.chance-per-skill");
-    this.minTreasureGems = plugin.getConfig().getInt("treasure.loot-items.min-gems", 0);
-    this.maxTreasureGems = plugin.getConfig().getInt("treasure.loot-items.max-gems", 2);
-    this.minTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.min-tier-items", 0);
-    this.maxTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.max-tier-items", 2);
-    this.tierRarityBonus = plugin.getConfig().getInt("treasure.loot-items.item-rarity-bonus", 9000);
+    customItemChances = new HashMap<>();
+    ConfigurationSection section = plugin.getConfig()
+        .getConfigurationSection("treasure.loot-items.custom-items");
+    for (String item : section.getKeys(false)) {
+      System.out.println("loaded" + item + " chance " + section.getDouble(item));
+      customItemChances.put(item, section.getDouble(item));
+    }
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -101,7 +115,8 @@ public class FishingListener implements Listener {
       caught.setItemStack(buildTreasure(catcher));
       return;
     }
-    CaughtFish fish = plugin.getFishManager().generateRandomFish(catcher);
+    CaughtFish fish = plugin.getFishManager()
+        .generateRandomFish(catcher, event.getCaught().getLocation());
 
     PlayerCatchCustomFishEvent customEvent = new PlayerCatchCustomFishEvent(catcher, fish, event);
     plugin.getServer().getPluginManager().callEvent(customEvent);
@@ -261,9 +276,9 @@ public class FishingListener implements Listener {
     items.addAll(plugin.getLootHooker().getGems(minTreasureGems +
         random.nextInt(maxTreasureGems - minTreasureGems + 1)));
     items.addAll(plugin.getLootHooker().getTierItems(minTreasureTierItems +
-        random.nextInt(maxTreasureTierItems - minTreasureTierItems + 1), player.getLevel(),
+            random.nextInt(maxTreasureTierItems - minTreasureTierItems + 1), player.getLevel(),
         tierRarityBonus));
-    items.addAll(plugin.getLootHooker().getCustomItems());
+    items.addAll(plugin.getLootHooker().getCustomItems(customItemChances));
     return items;
   }
 

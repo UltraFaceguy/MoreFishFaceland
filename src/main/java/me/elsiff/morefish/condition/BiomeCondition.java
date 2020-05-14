@@ -7,16 +7,17 @@ import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
 
 public class BiomeCondition implements Condition {
-    private final List<Biome> biomeList = new ArrayList<>();
 
-    public BiomeCondition(List<Biome> biomeList) {
-        this.biomeList.clear();
-        this.biomeList.addAll(biomeList);
-    }
+  private final List<Biome> biomeList = new ArrayList<>();
 
-    @Override
-    public boolean isSatisfying(Player player) {
-        Location loc = player.getLocation();
-        return (biomeList.contains(player.getWorld().getBiome(loc.getBlockX(), loc.getBlockZ())));
-    }
+  public BiomeCondition(List<Biome> biomeList) {
+    this.biomeList.clear();
+    this.biomeList.addAll(biomeList);
+  }
+
+  @Override
+  public boolean isSatisfying(Player player, Location fishLocation) {
+    return (biomeList
+        .contains(player.getWorld().getBiome(fishLocation.getBlockX(), fishLocation.getBlockZ())));
+  }
 }

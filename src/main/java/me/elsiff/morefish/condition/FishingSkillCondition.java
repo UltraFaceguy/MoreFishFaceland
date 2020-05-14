@@ -2,6 +2,7 @@ package me.elsiff.morefish.condition;
 
 import land.face.strife.data.champion.LifeSkillType;
 import land.face.strife.util.PlayerDataUtil;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 public class FishingSkillCondition implements Condition {
@@ -13,7 +14,7 @@ public class FishingSkillCondition implements Condition {
   }
 
   @Override
-  public boolean isSatisfying(Player player) {
+  public boolean isSatisfying(Player player, Location fishLocation) {
     return PlayerDataUtil.getLifeSkillLevel(player, LifeSkillType.FISHING) >= level;
   }
 }

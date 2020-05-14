@@ -1,22 +1,31 @@
 package me.elsiff.morefish;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 import land.face.strife.StrifePlugin;
 import me.elsiff.morefish.command.GeneralCommands;
-import me.elsiff.morefish.hooker.*;
-import me.elsiff.morefish.listener.*;
+import me.elsiff.morefish.hooker.LootHooker;
+import me.elsiff.morefish.hooker.PlaceholderAPIHooker;
+import me.elsiff.morefish.hooker.StrifeHooker;
+import me.elsiff.morefish.hooker.VaultHooker;
+import me.elsiff.morefish.hooker.WorldGuardHooker;
+import me.elsiff.morefish.listener.FishShopGUI;
+import me.elsiff.morefish.listener.FishingListener;
+import me.elsiff.morefish.listener.PlayerListener;
+import me.elsiff.morefish.listener.RewardsGUI;
+import me.elsiff.morefish.listener.SignListener;
 import me.elsiff.morefish.manager.BossBarManager;
 import me.elsiff.morefish.manager.ContestManager;
 import me.elsiff.morefish.manager.FishManager;
 import me.elsiff.morefish.pojo.FishConfiguration;
 import me.elsiff.morefish.protocol.UpdateChecker;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
 
 public class MoreFish extends JavaPlugin {
 
@@ -33,7 +42,6 @@ public class MoreFish extends JavaPlugin {
   private UpdateChecker updateChecker;
 
   private VaultHooker vaultHooker;
-  private CitizensHooker citizensHooker;
   private PlaceholderAPIHooker placeholderAPIHooker;
   private WorldGuardHooker worldGuardHooker;
   private StrifeHooker strifeHooker;
@@ -81,12 +89,6 @@ public class MoreFish extends JavaPlugin {
       } else {
         vaultHooker = null;
       }
-    }
-
-    if (manager.getPlugin("Citizens") != null && manager.getPlugin("Citizens").isEnabled()) {
-      citizensHooker = new CitizensHooker();
-      citizensHooker.registerTrait();
-      getLogger().info("Found Citizens for Fish Shop Trait.");
     }
 
     if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI")
@@ -177,14 +179,13 @@ public class MoreFish extends JavaPlugin {
   @Override
   public void onDisable() {
 
+    HandlerList.unregisterAll(this);
+    Bukkit.getScheduler().cancelTasks(this);
+
     getServer().getScheduler().cancelTask(taskId);
 
     if (getConfig().getBoolean("general.save-records")) {
       contestManager.saveRecords();
-    }
-
-    if (getCitizensHooker() != null) {
-      getCitizensHooker().deregisterTrait();
     }
 
     getLogger().info("Plugin has been disabled!");
@@ -263,10 +264,6 @@ public class MoreFish extends JavaPlugin {
 
   public VaultHooker getVaultHooker() {
     return vaultHooker;
-  }
-
-  public CitizensHooker getCitizensHooker() {
-    return citizensHooker;
   }
 
   public PlaceholderAPIHooker getPlaceholderAPIHooker() {

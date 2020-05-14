@@ -2,16 +2,39 @@ package me.elsiff.morefish.manager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import land.face.strife.data.champion.LifeSkillType;
 import land.face.strife.util.PlayerDataUtil;
+import me.elsiff.morefish.MoreFish;
+import me.elsiff.morefish.condition.BiomeCondition;
+import me.elsiff.morefish.condition.Condition;
+import me.elsiff.morefish.condition.ContestCondition;
+import me.elsiff.morefish.condition.EnchantmentCondition;
+import me.elsiff.morefish.condition.FishingSkillCondition;
+import me.elsiff.morefish.condition.HeightCondition;
+import me.elsiff.morefish.condition.LevelCondition;
+import me.elsiff.morefish.condition.NearbyBlockCondition;
+import me.elsiff.morefish.condition.PotionEffectCondition;
+import me.elsiff.morefish.condition.RainingCondition;
+import me.elsiff.morefish.condition.ThunderingCondition;
+import me.elsiff.morefish.condition.TimeCondition;
+import me.elsiff.morefish.condition.WGRegionCondtion;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.pojo.CustomFish;
-import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.pojo.Rarity;
-import me.elsiff.morefish.condition.*;
 import me.elsiff.morefish.util.IdentityUtils;
 import me.elsiff.morefish.util.SkullUtils;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Biome;
@@ -24,9 +47,6 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.potion.PotionEffectType;
-
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 public class FishManager {
 
@@ -195,6 +215,11 @@ public class FishManager {
       skullMeta.setOwner(section.getString(path + ".icon.skull-name"));
     }
 
+    int customData = section.getInt("icon.custom-model-data", -1);
+    if (customData != -1) {
+      meta.setCustomModelData(customData);
+    }
+
     itemStack.setItemMeta(meta);
 
     if (section.contains(path + ".icon.skull-texture")) {
@@ -243,6 +268,9 @@ public class FishManager {
         boolean ongoing = Boolean.parseBoolean(values[1]);
         condition = new ContestCondition(ongoing);
         break;
+      case "nearby_blocks":
+        condition = new NearbyBlockCondition(getMaterials(values));
+        break;
       case "potioneffect":
         PotionEffectType effectType = IdentityUtils.getPotionEffectType(values[1]);
         int amplfier = Integer.parseInt(values[2]);
@@ -267,12 +295,12 @@ public class FishManager {
     return condition;
   }
 
-  public CaughtFish generateRandomFish(Player catcher) {
+  public CaughtFish generateRandomFish(Player catcher, Location location) {
     // TODO: Only set level if strife is loaded
     double rodLuck = getLuckFromPlayer(catcher);
     Rarity rarity = getRandomRarity(
         PlayerDataUtil.getEffectiveLifeSkill(catcher, LifeSkillType.FISHING, true), rodLuck);
-    CustomFish type = getRandomFish(rarity, catcher);
+    CustomFish type = getRandomFish(rarity, catcher, location);
     return createCaughtFish(type, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
   }
 
@@ -357,7 +385,7 @@ public class FishManager {
     return null;
   }
 
-  private CustomFish getRandomFish(Rarity rarity, Player player) {
+  private CustomFish getRandomFish(Rarity rarity, Player player, Location location) {
     List<CustomFish> fishList = new ArrayList<>();
     for (CustomFish fish : rarityMap.get(rarity)) {
       if (fish.getConditions().isEmpty()) {
@@ -366,7 +394,7 @@ public class FishManager {
       }
       boolean meetsConditions = true;
       for (Condition condition : fish.getConditions()) {
-        if (!condition.isSatisfying(player)) {
+        if (!condition.isSatisfying(player, location)) {
           meetsConditions = false;
         }
       }
@@ -433,7 +461,7 @@ public class FishManager {
 
   private List<Biome> getBiomes(String[] values) {
     List<Biome> biomes = new ArrayList<>();
-    for (int i = 1; values.length < i; i++) {
+    for (int i = 1; i < values.length; i++) {
       try {
         biomes.add(Biome.valueOf(values[i].toUpperCase()));
       } catch (Exception e) {
@@ -441,6 +469,18 @@ public class FishManager {
       }
     }
     return biomes;
+  }
+
+  private Set<Material> getMaterials(String[] values) {
+    Set<Material> materials = new HashSet<>();
+    for (int i = 1; i < values.length; i++) {
+      try {
+        materials.add(Material.valueOf(values[i].toUpperCase()));
+      } catch (Exception e) {
+        plugin.getLogger().severe("Error! Fish has invalid material condition '" + values[i] + "'!");
+      }
+    }
+    return materials;
   }
 
   private double getTotalRarity(int level) {
