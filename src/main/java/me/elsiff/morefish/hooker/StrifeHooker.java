@@ -14,6 +14,6 @@ public class StrifeHooker {
 
   public void addFishingExperience(Player player, double amount) {
     strifePlugin.getSkillExperienceManager()
-        .addExperience(player, LifeSkillType.FISHING, amount, false);
+        .addExperience(player, LifeSkillType.FISHING, amount, false, false);
   }
 }

@@ -15,6 +15,7 @@ import me.elsiff.morefish.listener.FishingListener;
 import me.elsiff.morefish.listener.PlayerListener;
 import me.elsiff.morefish.listener.RewardsGUI;
 import me.elsiff.morefish.listener.SignListener;
+import me.elsiff.morefish.listener.TreasureListener;
 import me.elsiff.morefish.manager.BossBarManager;
 import me.elsiff.morefish.manager.ContestManager;
 import me.elsiff.morefish.manager.FishManager;
@@ -79,6 +80,7 @@ public class MoreFish extends JavaPlugin {
     manager = getServer().getPluginManager();
     manager.registerEvents(new FishingListener(this), this);
     manager.registerEvents(new PlayerListener(this), this);
+    manager.registerEvents(new TreasureListener(), this);
     manager.registerEvents(rewardsGUI, this);
 
     if (manager.getPlugin("Vault") != null && manager.getPlugin("Vault").isEnabled()) {

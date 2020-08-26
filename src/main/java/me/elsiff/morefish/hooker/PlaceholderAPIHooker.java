@@ -1,65 +1,85 @@
 package me.elsiff.morefish.hooker;
 
-import me.clip.placeholderapi.external.EZPlaceholderHook;
+import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.manager.ContestManager;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
-public class PlaceholderAPIHooker extends EZPlaceholderHook {
-    private final ContestManager contest;
+public class PlaceholderAPIHooker extends PlaceholderExpansion {
 
-    public PlaceholderAPIHooker(MoreFish plugin) {
-        super(plugin, "morefish");
-        this.contest = plugin.getContestManager();
-        this.hook();
+  private final ContestManager contest;
+
+  public PlaceholderAPIHooker(MoreFish plugin) {
+    this.contest = plugin.getContestManager();
+  }
+
+  @Override
+  public @NotNull String getAuthor() {
+    return "Faceguy";
+  }
+
+  @Override
+  public @NotNull String getIdentifier() {
+    return "fish";
+  }
+
+  @Override
+  public @NotNull String getVersion() {
+    return "1.0.0";
+  }
+
+  @Override
+  public boolean persist() {
+    return true;
+  }
+
+  @Override
+  public String onPlaceholderRequest(Player p, @NotNull String placeholder) {
+    if (placeholder.startsWith("top_player_")) {
+      if (!contest.hasStarted()) {
+        return "";
+      }
+      int number = Integer.parseInt(placeholder.substring(11));
+
+      if (number > contest.getRecordAmount()) {
+        return "";
+      }
+      ContestManager.Record record = contest.getRecord(number);
+
+      return record.getPlayer().getName();
+    } else if (placeholder.startsWith("top_fish_")) {
+      if (!contest.hasStarted()) {
+        return "";
+      }
+      int number = Integer.parseInt(placeholder.substring(9));
+
+      if (number > contest.getRecordAmount()) {
+        return "";
+      }
+      ContestManager.Record record = contest.getRecord(number);
+
+      return record.getFishName();
+    } else if (placeholder.startsWith("top_length_")) {
+      if (!contest.hasStarted()) {
+        return "";
+      }
+      int number = Integer.parseInt(placeholder.substring(11));
+
+      if (number > contest.getRecordAmount()) {
+        return "";
+      }
+      ContestManager.Record record = contest.getRecord(number);
+
+      return record.getLength() + "";
+    } else if (placeholder.startsWith("rank") && p != null) {
+      if (!contest.hasStarted()) {
+        return "";
+      }
+
+      return (contest.hasRecord(p) ? contest.getNumber(p) : 0) + "";
     }
 
-    @Override
-    public String onPlaceholderRequest(Player player, String str) {
-        if (str.startsWith("top_player_")) {
-            if (!contest.hasStarted()) {
-                return "";
-            }
-            int number = Integer.parseInt(str.substring(11));
-
-            if (number > contest.getRecordAmount()) {
-                return "";
-            }
-            ContestManager.Record record = contest.getRecord(number);
-
-            return record.getPlayer().getName();
-        } else if (str.startsWith("top_fish_")) {
-            if (!contest.hasStarted()) {
-                return "";
-            }
-            int number = Integer.parseInt(str.substring(9));
-
-            if (number > contest.getRecordAmount()) {
-                return "";
-            }
-            ContestManager.Record record = contest.getRecord(number);
-
-            return record.getFishName();
-        } else if (str.startsWith("top_length_")) {
-            if (!contest.hasStarted()) {
-                return "";
-            }
-            int number = Integer.parseInt(str.substring(11));
-
-            if (number > contest.getRecordAmount()) {
-                return "";
-            }
-            ContestManager.Record record = contest.getRecord(number);
-
-            return record.getLength() + "";
-        } else if (str.startsWith("rank") && player != null) {
-            if (!contest.hasStarted()) {
-                return "";
-            }
-
-            return (contest.hasRecord(player) ? contest.getNumber(player) : 0) + "";
-        }
-
-        return null;
-    }
+    return null;
+  }
 }

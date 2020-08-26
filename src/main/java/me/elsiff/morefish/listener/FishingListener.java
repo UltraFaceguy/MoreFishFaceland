@@ -1,5 +1,7 @@
 package me.elsiff.morefish.listener;
 
+import com.tealcube.minecraft.bukkit.TextUtils;
+import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,6 +15,7 @@ import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
 import me.elsiff.morefish.manager.ContestManager;
 import me.elsiff.morefish.pojo.CaughtFish;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
@@ -113,6 +116,12 @@ public class FishingListener implements Listener {
         catcher, LifeSkillType.FISHING, true) > Math.random()) {
       Item caught = (Item) event.getCaught();
       caught.setItemStack(buildTreasure(catcher));
+      String msg = TextUtils.color(
+          "&6&lD&e&la&6&ln&e&lg &6&lS&e&lo&6&ln&e&l!&6&l! &f" + catcher.getName()
+              + " &7caught a &6Treasure Chest&7!");
+      for (Player p : Bukkit.getOnlinePlayers()) {
+        p.sendMessage(msg);
+      }
       return;
     }
     CaughtFish fish = plugin.getFishManager()
@@ -248,11 +257,12 @@ public class FishingListener implements Listener {
   }
 
   private ItemStack buildTreasure(Player player) {
-    ItemStack item = new ItemStack(Material.SHULKER_BOX);
+    ItemStack item = new ItemStack(Material.BLACK_SHULKER_BOX);
     if (item.getItemMeta() instanceof BlockStateMeta) {
       BlockStateMeta im = (BlockStateMeta) item.getItemMeta();
       if (im.getBlockState() instanceof ShulkerBox) {
         ShulkerBox shulker = (ShulkerBox) im.getBlockState();
+
         ItemStack[] stacks = new ItemStack[27];
         Set<Integer> freeSlots = getFreeSpace(stacks);
         for (ItemStack stack : getLootItems(player)) {
@@ -268,6 +278,8 @@ public class FishingListener implements Listener {
         item.setItemMeta(im);
       }
     }
+    ItemStackExtensionsKt.setDisplayName(item, ChatColor.GOLD + "Treasure Chest");
+    ItemStackExtensionsKt.setCustomModelData(item, 1337);
     return item;
   }
 

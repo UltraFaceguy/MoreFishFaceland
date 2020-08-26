@@ -32,7 +32,6 @@ import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.pojo.Rarity;
 import me.elsiff.morefish.util.IdentityUtils;
-import me.elsiff.morefish.util.SkullUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -222,14 +221,8 @@ public class FishManager {
 
     itemStack.setItemMeta(meta);
 
-    if (section.contains(path + ".icon.skull-texture")) {
-      String value = section.getString(path + ".icon.skull-texture");
-      itemStack = SkullUtils.setSkullTexture(itemStack, value);
-    }
-
-    if (itemStack == null || itemStack.getItemMeta() == null) {
-      plugin.getLogger()
-          .severe("Item found at section '" + section + "' path '" + path + "' is invalid!");
+    if (itemStack.getItemMeta() == null) {
+      plugin.getLogger().severe("Item found at section '" + section + "' path '" + path + "' is invalid!");
     }
     return itemStack;
   }

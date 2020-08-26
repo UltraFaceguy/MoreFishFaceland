@@ -3,7 +3,7 @@ author: elsiff
 website: http://elsiff.me
 version: ${project.version}
 main: me.elsiff.morefish.MoreFish
-api-version: 1.14
+api-version: 1.16
 softdepend: [Vault, Citizens, PlaceholderAPI, ProtocolLib, mcMMO, WorldGuard, Strife, Loot]
 commands:
   morefish:
