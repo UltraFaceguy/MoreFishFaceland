@@ -1,6 +1,6 @@
 package me.elsiff.morefish.listener;
 
-import com.tealcube.minecraft.bukkit.TextUtils;
+import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
 import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import land.face.jobbo.util.JobUtil;
 import land.face.strife.data.champion.LifeSkillType;
 import land.face.strife.util.PlayerDataUtil;
 import me.elsiff.morefish.MoreFish;
@@ -122,6 +123,7 @@ public class FishingListener implements Listener {
       for (Player p : Bukkit.getOnlinePlayers()) {
         p.sendMessage(msg);
       }
+      JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish", "INTERNAL_TREASURE");
       return;
     }
     CaughtFish fish = plugin.getFishManager()
@@ -161,6 +163,16 @@ public class FishingListener implements Listener {
     ItemStack itemStack = plugin.getFishManager().getItemStack(fish, event.getPlayer().getName());
     Item caught = (Item) event.getCaught();
     caught.setItemStack(itemStack);
+
+    JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish",
+        fish.getInternalName());
+    int fishScore = (int) (10 * Math.floor(fish.getLength() / 10));
+    while (fishScore > 0) {
+      JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish_length", fishScore + "+");
+      fishScore -= 10;
+    }
+    JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish_rarity",
+        fish.getRarity().getName());
   }
 
   private void announceMessages(Player catcher, CaughtFish fish, boolean new1st) {
