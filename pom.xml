@@ -34,8 +34,7 @@
     <version>1.17.1.0</version>
   </parent>
 
-  <groupId>me.elsiff</groupId>
-  <artifactId>morefish</artifactId>
+  <artifactId>morefish-faceland</artifactId>
   <version>2.3.0</version>
 
   <repositories>
