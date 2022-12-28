@@ -96,7 +96,7 @@ public class FishingListener implements Listener {
 
   @EventHandler(priority = EventPriority.MONITOR)
   public void onCustomCatch(PlayerCatchCustomFishEvent event) {
-    boolean announce = event.getFish().getFish().getRarity().getWeight() < 100;
+    boolean announce = event.getFish().getFish().getRarity().getWeight() < 40;
     boolean newLead = false;
     if (contest.hasStarted()) {
       event.setXp(event.getXp() * 2f);

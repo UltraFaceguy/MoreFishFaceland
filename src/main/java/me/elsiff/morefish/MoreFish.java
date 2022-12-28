@@ -146,17 +146,10 @@ public class MoreFish extends JavaPlugin {
 
   @Override
   public void onDisable() {
-
     HandlerList.unregisterAll(this);
     Bukkit.getScheduler().cancelTasks(this);
-
     getServer().getScheduler().cancelTask(taskId);
-
-    if (getConfig().getBoolean("general.save-records")) {
-      contestManager.saveRecords();
-    }
-
-    getLogger().info("Plugin has been disabled!");
+    getLogger().info("[MoreFish] Plugin has been disabled!");
   }
 
   public FishConfiguration getFishConfiguration() {

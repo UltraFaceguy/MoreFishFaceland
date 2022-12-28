@@ -1,57 +1,43 @@
 package me.elsiff.morefish.manager;
 
+import com.tealcube.minecraft.bukkit.facecore.utilities.PaletteUtil;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import land.face.mail.MailTimePlugin;
+import land.face.mail.pojo.ManagedLetter;
 import land.face.strife.StrifePlugin;
-import land.face.strife.data.StrifeMob;
 import land.face.strife.managers.GuiManager;
-import me.elsiff.morefish.pojo.CaughtFish;
+import lombok.Getter;
 import me.elsiff.morefish.MoreFish;
+import me.elsiff.morefish.pojo.CaughtFish;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 public class ContestManager {
 
-  private static final String PREFIX_REWARD = "reward_";
-  private static final String PREFIX_CMD_REWARD = "cmd_";
-  private static final String PREFIX_CASH_PRIZE = "cash-prize_";
   private final MoreFish plugin;
   private final RecordComparator comparator = new RecordComparator();
   private final List<Record> recordList = new ArrayList<>();
   private final File fileRewards;
   private final FileConfiguration configRewards;
-  private File fileRecords;
-  private FileConfiguration configRecords;
   private boolean hasStarted = false;
   private TimerTask task = null;
 
   public ContestManager(MoreFish plugin) {
     this.plugin = plugin;
-
     if (plugin.getConfig().getBoolean("general.auto-start")) {
       hasStarted = true;
     }
-
     fileRewards = new File(plugin.getDataFolder(), "rewards.yml");
-
     createFile(fileRewards);
     configRewards = YamlConfiguration.loadConfiguration(fileRewards);
-
-    if (plugin.getConfig().getBoolean("general.save-records")) {
-      fileRecords = new File(plugin.getDataFolder(), "records.yml");
-      createFile(fileRecords);
-      configRecords = YamlConfiguration.loadConfiguration(fileRecords);
-
-      loadRecords();
-    }
   }
 
   private void createFile(File file) {
@@ -65,47 +51,6 @@ public class ContestManager {
       } catch (IOException e) {
         plugin.getLogger().severe(e.getMessage());
       }
-    }
-  }
-
-  private void saveRewards() {
-    try {
-      configRewards.save(fileRewards);
-    } catch (IOException e) {
-      plugin.getLogger().severe(e.getMessage());
-    }
-  }
-
-  private void loadRecords() {
-    recordList.clear();
-
-    for (String path : configRecords.getKeys(false)) {
-      UUID id = UUID.fromString(configRecords.getString(path + ".player"));
-      String fishName = configRecords.getString(path + ".fish-name");
-      double length = configRecords.getDouble(path + ".length");
-
-      recordList.add(new Record(id, fishName, length));
-    }
-
-    recordList.sort(comparator);
-  }
-
-  public void saveRecords() {
-    for (String path : configRecords.getKeys(false)) {
-      configRecords.set(path, null);
-    }
-
-    for (int i = 0; i < recordList.size(); i++) {
-      Record record = recordList.get(i);
-      configRecords.set(i + ".player", record.getPlayer().getUniqueId().toString());
-      configRecords.set(i + ".fish-name", record.getFishName());
-      configRecords.set(i + ".length", record.getLength());
-    }
-
-    try {
-      configRecords.save(fileRecords);
-    } catch (IOException e) {
-      plugin.getLogger().severe(e.getMessage());
     }
   }
 
@@ -133,211 +78,29 @@ public class ContestManager {
       task = null;
     }
     giveRewards();
-    if (!plugin.getConfig().getBoolean("general.save-records")) {
-      recordList.clear();
-    }
+    recordList.clear();
     hasStarted = false;
   }
 
   private void giveRewards() {
-    Set<Integer> receivers = new HashSet<>();
-
-    ItemStack[] rewards = getRewards();
-    for (int i = 0; i < rewards.length - 1 && i < recordList.size(); i++) {
-      ItemStack stack = rewards[i];
-
-      if (stack == null || stack.getType() == Material.AIR) {
-        continue;
+    int ranking = 1;
+    for (Record record : recordList) {
+      if (ranking > 3) {
+        break;
       }
-
-      OfflinePlayer player = getRecord(i + 1).getPlayer();
-      sendReward(player, stack);
-
-      receivers.add(i);
-    }
-
-    if (plugin.hasEconomy()) {
-      double[] cashPrizes = getCashPrizes();
-      for (int i = 0; i < cashPrizes.length - 1 && i < recordList.size(); i++) {
-        double amount = cashPrizes[i];
-
-        if (amount <= 0) {
-          continue;
-        }
-
-        OfflinePlayer player = getRecord(i + 1).getPlayer();
-        sendCashPrize(player, amount);
-
-        receivers.add(i);
+      String letterId = "fish-reward-" + ranking;
+      ranking++;
+      ManagedLetter letter = MailTimePlugin.getInstance().getLetterManager().getManagedLetter(letterId);
+      if (letter == null) {
+        Bukkit.getLogger().info("[MoreFish] Failed to find letter " + letterId + ", it's null.");
+        return;
       }
-
-      if (cashPrizes[7] > 0) {
-        for (int i = 0; i < getRecordAmount(); i++) {
-          if (receivers.contains(i)) {
-            continue;
-          }
-
-          Record record = getRecord(i + 1);
-
-          sendCashPrize(record.getPlayer(), cashPrizes[7]);
-        }
+      boolean success = MailTimePlugin.getInstance().getLetterManager().sendLetter(letter, record.getPlayer());
+      if (success) {
+        PaletteUtil.sendMessage(record.getPlayer(),
+            "|lime|Your contest rewards have been sent to your mailbox!");
       }
     }
-
-    String[] cmdRewards = getCmdRewards();
-    for (int i = 0; i < cmdRewards.length - 1 && i < recordList.size(); i++) {
-      String command = cmdRewards[i];
-
-      if (command == null) {
-        continue;
-      }
-
-      OfflinePlayer player = getRecord(i + 1).getPlayer();
-      String str = command.replaceAll("@p", player.getName());
-      plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), str);
-
-      receivers.add(i);
-    }
-
-    if (rewards[7] != null) {
-      for (int i = 0; i < getRecordAmount(); i++) {
-        if (receivers.contains(i)) {
-          continue;
-        }
-
-        Record record = getRecord(i + 1);
-        sendReward(record.getPlayer(), rewards[7]);
-      }
-    }
-  }
-
-  private void sendReward(OfflinePlayer oPlayer, ItemStack stack) {
-    if (!oPlayer.isOnline()) {
-      plugin.getLogger().info(oPlayer.getName()
-          + "'s reward of fishing contest has not been sent as the player is offline now.");
-      return;
-    }
-
-    Player player = oPlayer.getPlayer();
-
-    if (player.getInventory().firstEmpty() != -1) {
-      player.getInventory().addItem(stack);
-    } else {
-      player.getWorld().dropItem(player.getLocation(), stack);
-    }
-
-    int number = getNumber(player);
-    String msg = plugin.getFishConfiguration().getString("reward");
-
-    msg = msg.replaceAll("%player%", player.getName())
-        .replaceAll("%item%", getItemName(stack))
-        .replaceAll("%ordinal%", plugin.getOrdinal(number))
-        .replaceAll("%number%", Integer.toString(number));
-
-    player.sendMessage(msg);
-  }
-
-  private void sendCashPrize(OfflinePlayer player, double amount) {
-    if (!plugin.getVaultHooker().getEconomy().hasAccount(player)) {
-      plugin.getLogger().info(player.getName()
-          + "'s reward of fishing contest has not been sent as having no economy account.");
-      return;
-    } else {
-      plugin.getVaultHooker().getEconomy().depositPlayer(player, amount);
-    }
-
-    if (player.isOnline()) {
-      int number = getNumber(player);
-      String msg = plugin.getFishConfiguration().getString("reward-cash-prize");
-
-      msg = msg.replaceAll("%player%", player.getName())
-          .replaceAll("%amount%", Double.toString(amount))
-          .replaceAll("%ordinal%", plugin.getOrdinal(number))
-          .replaceAll("%number%", Integer.toString(number));
-
-      player.getPlayer().sendMessage(msg);
-    }
-  }
-
-  private String getItemName(ItemStack item) {
-    return ((item.hasItemMeta() && item.getItemMeta().hasDisplayName()) ?
-        item.getItemMeta().getDisplayName()
-        : item.getType().name().toLowerCase().replaceAll("_", " "));
-  }
-
-  public ItemStack[] getRewards() {
-    ItemStack[] rewards = new ItemStack[8];
-
-    for (String path : configRewards.getKeys(false)) {
-      if (!path.startsWith(PREFIX_REWARD)) {
-        continue;
-      }
-
-      int i = Integer.parseInt(path.substring(7));
-      ItemStack item = configRewards.getItemStack("reward_" + i);
-
-      rewards[i] = item;
-    }
-
-    return rewards;
-  }
-
-  public void setRewards(ItemStack[] rewards) {
-    for (int i = 0; i < rewards.length; i++) {
-      configRewards.set(PREFIX_REWARD + i, rewards[i]);
-    }
-
-    saveRewards();
-  }
-
-  public String[] getCmdRewards() {
-    String[] rewards = new String[8];
-
-    for (String path : configRewards.getKeys(false)) {
-      if (!path.startsWith(PREFIX_CMD_REWARD)) {
-        continue;
-      }
-
-      int i = Integer.parseInt(path.substring(4));
-      String cmd = configRewards.getString("cmd_" + i);
-
-      rewards[i] = cmd;
-    }
-
-    return rewards;
-  }
-
-  public void setCmdRewards(String[] rewards) {
-    for (int i = 0; i < rewards.length; i++) {
-      configRewards.set(PREFIX_CMD_REWARD + i, rewards[i]);
-    }
-
-    saveRewards();
-  }
-
-  public double[] getCashPrizes() {
-    double[] arr = new double[8];
-
-    for (String path : configRewards.getKeys(false)) {
-      if (!path.startsWith(PREFIX_CASH_PRIZE)) {
-        continue;
-      }
-
-      int i = Integer.parseInt(path.substring(11));
-      double amount = configRewards.getDouble("cash-prize_" + i);
-
-      arr[i] = amount;
-    }
-
-    return arr;
-  }
-
-  public void setCashPrizes(double[] arr) {
-    for (int i = 0; i < arr.length; i++) {
-      configRewards.set(PREFIX_CASH_PRIZE + i, arr[i]);
-    }
-
-    saveRewards();
   }
 
   public boolean isNew1st(CaughtFish fish) {
@@ -345,7 +108,7 @@ public class ContestManager {
     return (record == null || record.getLength() < fish.getLength());
   }
 
-  public void addRecord(OfflinePlayer player, CaughtFish fish) {
+  public void addRecord(Player player, CaughtFish fish) {
     Record replacedRecord = null;
     for (Record r : recordList) {
       if (r.getPlayer() == player) {
@@ -360,7 +123,7 @@ public class ContestManager {
     if (replacedRecord != null) {
       recordList.remove(replacedRecord);
     }
-    recordList.add(new Record(player.getUniqueId(), fish));
+    recordList.add(new Record(player, fish));
     recordList.sort(comparator);
   }
 
@@ -385,7 +148,7 @@ public class ContestManager {
     return false;
   }
 
-  public double getRecordLength(OfflinePlayer player) {
+  public double getRecordLength(Player player) {
     for (Record record : recordList) {
       if (record.getPlayer().equals(player)) {
         return record.getLength();
@@ -429,30 +192,22 @@ public class ContestManager {
 
   public class Record {
 
-    private final UUID id;
-    private final String fishName;
-    private final double length;
+    @Getter
+    private final Player player;
+    @Getter
+    private final CaughtFish fish;
 
-    public Record(UUID id, CaughtFish fish) {
-      this(id, fish.getFish().getName(), fish.getLength());
-    }
-
-    public Record(UUID id, String fishName, double length) {
-      this.id = id;
-      this.fishName = fishName;
-      this.length = length;
-    }
-
-    public OfflinePlayer getPlayer() {
-      return plugin.getServer().getOfflinePlayer(id);
+    public Record(Player player, CaughtFish fish) {
+      this.player = player;
+      this.fish = fish;
     }
 
     public String getFishName() {
-      return fishName;
+      return fish.getFish().getName();
     }
 
     public double getLength() {
-      return length;
+      return fish.getLength();
     }
   }
 

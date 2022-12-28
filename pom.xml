@@ -79,6 +79,12 @@
     </dependency>
     <dependency>
       <groupId>io.pixeloutlaw</groupId>
+      <artifactId>mail-time</artifactId>
+      <version>1.0.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.pixeloutlaw</groupId>
       <artifactId>LearninBooks</artifactId>
       <version>1.0.0</version>
       <scope>provided</scope>
