@@ -215,66 +215,8 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
       }
 
       return true;
-    } else if ("rewards".equalsIgnoreCase(args[0])) {
-      if (!(sender instanceof Player)) {
-        sender.sendMessage(plugin.getFishConfiguration().getString("in-game-command"));
-        return true;
-      }
-
-      Player player = (Player) sender;
-
-      if (!player.hasPermission("morefish.admin")) {
-        player.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
-        return true;
-      }
-
-      plugin.getRewardsGUI().openGUI(player);
-
-      return true;
-    } else if ("shop".equalsIgnoreCase(args[0])) {
-      if (args.length < 2) {
-        if (!sender.hasPermission("morefish.shop")) {
-          sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
-          return true;
-        }
-
-        if (!(sender instanceof Player)) {
-          sender.sendMessage(plugin.getFishConfiguration().getString("in-game-command"));
-          return true;
-        }
-
-        Player player = (Player) sender;
-
-        if (plugin.getFishShopGUI() == null) {
-          sender.sendMessage(plugin.getFishConfiguration().getString("shop-disabled"));
-          return true;
-        }
-
-        plugin.getFishShopGUI().openGUI(player);
-      } else {
-        if (!sender.hasPermission("morefish.admin")) {
-          sender.sendMessage(plugin.getFishConfiguration().getString("no-permission"));
-          return true;
-        }
-
-        Player player = getPlayer(args[1]);
-
-        if (player == null) {
-          sender.sendMessage(
-              String.format(plugin.getFishConfiguration().getString("player-not-found"), args[1]));
-          return true;
-        }
-
-        plugin.getFishShopGUI().openGUI(player);
-        sender.sendMessage(String
-            .format(plugin.getFishConfiguration().getString("forced-player-to-shop"),
-                player.getName()));
-      }
-
-      return true;
     } else {
       sender.sendMessage(plugin.getFishConfiguration().getString("invalid-command"));
-
       return true;
     }
   }

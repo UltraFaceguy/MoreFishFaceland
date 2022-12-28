@@ -1,7 +1,11 @@
 package me.elsiff.morefish.manager;
 
+import land.face.strife.StrifePlugin;
+import land.face.strife.data.StrifeMob;
+import land.face.strife.managers.GuiManager;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.MoreFish;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -120,30 +124,18 @@ public class ContestManager {
   public void startWithTimer(long sec) {
     task = new TimerTask(sec);
     task.runTaskTimer(plugin, 20, 20);
-
-    if (plugin.hasBossBar()) {
-      plugin.getBossBarManager().createTimerBar(sec);
-    }
-
     start();
   }
 
   public void stop() {
     if (task != null) {
-      if (plugin.hasBossBar()) {
-        plugin.getBossBarManager().removeTimerBar();
-      }
-
       task.cancel();
       task = null;
     }
-
     giveRewards();
-
     if (!plugin.getConfig().getBoolean("general.save-records")) {
       recordList.clear();
     }
-
     hasStarted = false;
   }
 
@@ -373,6 +365,9 @@ public class ContestManager {
   }
 
   public Record getRecord(int number) {
+    if (recordList.size() == 0) {
+      return null;
+    }
     return ((recordList.size() >= number) ? recordList.get(number - 1) : null);
   }
 
@@ -396,8 +391,14 @@ public class ContestManager {
         return record.getLength();
       }
     }
-
     return 0.0D;
+  }
+
+  public Record getTopRecord() {
+    if (recordList.size() == 0) {
+      return null;
+    }
+    return recordList.get(0);
   }
 
   public int getNumber(OfflinePlayer player) {
@@ -433,7 +434,7 @@ public class ContestManager {
     private final double length;
 
     public Record(UUID id, CaughtFish fish) {
-      this(id, fish.getName(), fish.getLength());
+      this(id, fish.getFish().getName(), fish.getLength());
     }
 
     public Record(UUID id, String fishName, double length) {
@@ -459,6 +460,8 @@ public class ContestManager {
 
     private final long timer;
     private long passed = 0;
+    private String latestBar = "";
+    private int latestStage = -1;
 
     public TimerTask(long sec) {
       this.timer = sec;
@@ -467,11 +470,29 @@ public class ContestManager {
     public void run() {
       passed++;
 
-      if (plugin.hasBossBar()) {
-        plugin.getBossBarManager().updateTimerBar(passed, timer);
+      long left = timer - passed;
+      String title = plugin.getFishConfiguration().getString("timer-boss-bar")
+          .replaceAll("%time%", plugin.getTimeString(left));
+
+      double progress = (double) left / timer;
+      int stage = (int) (138D * progress);
+      if (stage != latestStage) {
+        latestStage = stage;
+        latestBar = "♅" + GuiManager.HEALTH_BAR_TARGET.get(138 - stage);
+      }
+      boolean finished = passed >= timer;
+
+      for (Player p : Bukkit.getOnlinePlayers()) {
+        if (finished) {
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 3, 3, "", 0);
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 2, 3, "", 0);
+        } else {
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 3, 3, title, 25);
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 2, 3, latestBar, 25);
+        }
       }
 
-      if (passed >= timer) {
+      if (finished) {
         plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "morefish stop");
         this.cancel();
       }

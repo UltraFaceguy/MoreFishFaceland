@@ -1,5 +1,6 @@
 package me.elsiff.morefish.listener;
 
+import com.tealcube.minecraft.bukkit.facecore.utilities.ItemUtils;
 import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
 import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.util.ArrayList;
@@ -9,8 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import land.face.jobbo.util.JobUtil;
+import land.face.learnin.LearninBooksPlugin;
 import land.face.strife.data.champion.LifeSkillType;
+import land.face.strife.events.AutoFishEvent;
 import land.face.strife.util.PlayerDataUtil;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
@@ -31,6 +35,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerFishEvent.State;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -40,16 +45,21 @@ public class FishingListener implements Listener {
   private final MoreFish plugin;
   private final ContestManager contest;
 
-  private double treasureChance;
-  private double treasurePerLevel;
-  private int minTreasureGems;
-  private int maxTreasureGems;
-  private int minTreasureTierItems;
-  private int maxTreasureTierItems;
-  private double tierRarityBonus;
-  private Map<String, Double> customItemChances;
+  private final double treasureChance;
+  private final double treasurePerLevel;
+  private final int minTreasureGems;
+  private final int maxTreasureGems;
+  private final int minTreasureTierItems;
+  private final int maxTreasureTierItems;
+  private final double tierRarityBonus;
 
-  private Random random = new Random();
+  private final double baseFishXp;
+  private final double fishXpPerCm;
+
+  private final Map<String, Double> customItemChances;
+  private final Set<UUID> baitOnCast = new HashSet<>();
+
+  private final Random random = new Random();
 
   public FishingListener(MoreFish plugin) {
     this.plugin = plugin;
@@ -62,19 +72,64 @@ public class FishingListener implements Listener {
     maxTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.max-tier-items", 2);
     tierRarityBonus = plugin.getConfig().getInt("treasure.loot-items.item-rarity-bonus", 9000);
 
+    baseFishXp = plugin.getConfig().getDouble("general.xp-per-cm", 0.1);
+    fishXpPerCm = plugin.getConfig().getDouble("general.base-xp", 1);
+
     customItemChances = new HashMap<>();
     ConfigurationSection section = plugin.getConfig()
         .getConfigurationSection("treasure.loot-items.custom-items");
+
     for (String item : section.getKeys(false)) {
       System.out.println("loaded" + item + " chance " + section.getDouble(item));
       customItemChances.put(item, section.getDouble(item));
     }
   }
 
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+  @EventHandler
+  public void onCast(PlayerFishEvent event) {
+    if (event.getState() == State.FISHING) {
+      if (event.getPlayer().getEquipment().getItemInOffHand().getType() == Material.WHEAT_SEEDS) {
+        baitOnCast.add(event.getPlayer().getUniqueId());
+      }
+    }
+  }
+
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onCustomCatch(PlayerCatchCustomFishEvent event) {
+    boolean announce = event.getFish().getFish().getRarity().getWeight() < 100;
+    boolean newLead = false;
+    if (contest.hasStarted()) {
+      event.setXp(event.getXp() * 2f);
+      if (contest.getTopRecord() == null || contest.isNew1st(event.getFish())) {
+        announce = true;
+        newLead = true;
+      }
+    }
+    if (announce) {
+      Bukkit.getServer().broadcastMessage(getMessage("catch-fish", event.getPlayer(), event.getFish()));
+    }
+    if (newLead) {
+      if (contest.getTopRecord() == null || contest.getTopRecord().getPlayer() != event.getPlayer()) {
+        Bukkit.getServer().broadcastMessage(getMessage("get-1st", event.getPlayer(), event.getFish()));
+      } else {
+        Bukkit.getServer().broadcastMessage(getMessage("extend-lead", event.getPlayer(), event.getFish()));
+      }
+    }
+    if (contest.hasStarted()) {
+      contest.addRecord(event.getPlayer(), event.getFish());
+    }
+  }
+
+  @EventHandler
   public void onFish(PlayerFishEvent event) {
-    if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH && event
-        .getCaught() instanceof Item) {
+    if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH &&
+        event.getCaught() instanceof Item) {
+      if (baitOnCast.contains(event.getPlayer().getUniqueId()) &&
+          event.getPlayer().getEquipment().getItemInOffHand().getType() != Material.WHEAT_SEEDS) {
+        baitOnCast.remove(event.getPlayer().getUniqueId());
+        event.setCancelled(true);
+        return;
+      }
       if (!contest.hasStarted() && plugin.getConfig()
           .getBoolean("general.no-fishing-unless-contest")) {
         event.setCancelled(true);
@@ -86,9 +141,58 @@ public class FishingListener implements Listener {
       if (!isFishingEnabled(event)) {
         return;
       }
-
       event.setExpToDrop(0);
       executeFishingActions(event.getPlayer(), event);
+    }
+  }
+
+  @EventHandler
+  public void onAutoFish(AutoFishEvent event) {
+    Player catcher = (Player) event.getMob().getEntity();
+
+    if (baitOnCast.contains(catcher.getUniqueId()) &&
+        catcher.getEquipment().getItemInOffHand().getType() != Material.WHEAT_SEEDS) {
+      baitOnCast.remove(catcher.getUniqueId());
+      return;
+    }
+
+    CaughtFish fish = plugin.getFishManager().generateRandomFish(catcher, event.getLocation());
+
+    if (fish == null) {
+      return;
+    }
+
+    float xp = (float) (baseFishXp + fishXpPerCm * fish.getLength());
+    xp *= fish.getFish().getRarity().getXpMult();
+    xp *= 0.75;
+
+    PlayerCatchCustomFishEvent customEvent = new PlayerCatchCustomFishEvent(catcher, fish);
+    customEvent.setXp(xp);
+    plugin.getServer().getPluginManager().callEvent(customEvent);
+
+    if (customEvent.isCancelled()) {
+      return;
+    }
+
+    plugin.getStrifeHooker().addFishingExperience(catcher, event.getLocation(), customEvent.getXp());
+
+    if (!fish.getFish().getCommands().isEmpty()) {
+      executeCommands(catcher, fish);
+    }
+
+    JobUtil.bumpTaskProgress(catcher, "mf_fish", fish.getFish().getId());
+    int fishScore = (int) (10 * Math.floor(fish.getLength() / 10));
+    while (fishScore > 0) {
+      JobUtil.bumpTaskProgress(catcher, "mf_fish_length", fishScore + "+");
+      fishScore -= 10;
+    }
+    JobUtil.bumpTaskProgress(catcher, "mf_fish_rarity", fish.getFish().getRarity().getId());
+    LearninBooksPlugin.instance.getKnowledgeManager().incrementKnowledge(catcher, fish.getFish().getId());
+    ItemUtils.giveOrDrop(catcher, fish.getFish().getRarity().getBaseTicksLived(),
+        plugin.getFishManager().buildItemFromFish(fish, catcher.getName()));
+
+    if (catcher.getEquipment().getItemInOffHand().getType() == Material.WHEAT_SEEDS) {
+      baitOnCast.add(catcher.getUniqueId());
     }
   }
 
@@ -126,75 +230,51 @@ public class FishingListener implements Listener {
       JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish", "INTERNAL_TREASURE");
       return;
     }
-    CaughtFish fish = plugin.getFishManager()
-        .generateRandomFish(catcher, event.getCaught().getLocation());
+
+    CaughtFish fish = plugin.getFishManager().generateRandomFish(catcher, event.getCaught().getLocation());
+
+    if (fish == null) {
+      event.setCancelled(true);
+      return;
+    }
+
+    float xp = (float) (baseFishXp + fishXpPerCm * fish.getLength());
+    xp *= fish.getFish().getRarity().getXpMult();
 
     PlayerCatchCustomFishEvent customEvent = new PlayerCatchCustomFishEvent(catcher, fish, event);
+    customEvent.setXp(xp);
+
     plugin.getServer().getPluginManager().callEvent(customEvent);
 
     if (customEvent.isCancelled()) {
       return;
     }
 
-    if (fish.getFishingExperience() > 0.01) {
-      double xp = fish.getFishingExperience() * (contest.hasStarted() ? 2 : 1);
-      plugin.getStrifeHooker().addFishingExperience(catcher, xp);
-    }
+    plugin.getStrifeHooker().addFishingExperience(catcher, event.getHook().getLocation(), customEvent.getXp());
 
-    boolean topFish = contest.hasStarted() && contest.isNew1st(fish);
-    boolean newFirst = false;
-    if (topFish) {
-      newFirst = contest.getRecord(1) == null ||
-          contest.getRecord(1).getPlayer() != fish.getCatcher();
-    }
-
-    if (fish.getRarity().hasFirework()) {
-      launchFirework(catcher.getLocation().add(0, 1, 0));
-    }
-    if (!fish.getCommands().isEmpty()) {
+    if (!fish.getFish().getCommands().isEmpty()) {
       executeCommands(catcher, fish);
     }
-    if (contest.hasStarted()) {
-      contest.addRecord(catcher, fish);
+
+    ItemStack itemStack = plugin.getFishManager().buildItemFromFish(fish, event.getPlayer().getName());
+
+    if (itemStack == null) {
+      event.setCancelled(true);
+      return;
     }
 
-    announceMessages(catcher, fish, newFirst);
-
-    ItemStack itemStack = plugin.getFishManager().getItemStack(fish, event.getPlayer().getName());
     Item caught = (Item) event.getCaught();
     caught.setItemStack(itemStack);
+    caught.setTicksLived(fish.getFish().getRarity().getBaseTicksLived());
 
-    JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish",
-        fish.getInternalName());
+    JobUtil.bumpTaskProgress(event.getPlayer(), "mf_fish", fish.getFish().getId());
     int fishScore = (int) (10 * Math.floor(fish.getLength() / 10));
     while (fishScore > 0) {
-      JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish_length", fishScore + "+");
+      JobUtil.bumpTaskProgress(event.getPlayer(), "mf_fish_length", fishScore + "+");
       fishScore -= 10;
     }
-    JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish_rarity",
-        fish.getRarity().getName());
-  }
-
-  private void announceMessages(Player catcher, CaughtFish fish, boolean new1st) {
-    String msgFish = getMessage("catch-fish", catcher, fish);
-    String msgContest = getMessage("get-1st", catcher, fish);
-    int ancFish = plugin.getConfig().getInt("messages.announce-catch");
-    int ancContest = plugin.getConfig().getInt("messages.announce-new-1st");
-
-    if (fish.getRarity().isNoBroadcast()) {
-      ancFish = 0;
-    }
-    if (new1st) {
-      ancFish = ancContest;
-    }
-
-    getMessageReceivers(ancFish, catcher)
-        .forEach(player -> player.sendMessage(msgFish));
-
-    if (new1st) {
-      getMessageReceivers(ancContest, catcher)
-          .forEach(player -> player.sendMessage(msgContest));
-    }
+    JobUtil.bumpTaskProgress(event.getPlayer(), "mf_fish_rarity", fish.getFish().getRarity().getId());
+    LearninBooksPlugin.instance.getKnowledgeManager().incrementKnowledge(catcher, fish.getFish().getId());
   }
 
   private String getMessage(String path, Player player, CaughtFish fish) {
@@ -202,49 +282,19 @@ public class FishingListener implements Listener {
 
     message = message.replaceAll("%player%", player.getName())
         .replaceAll("%length%", fish.getLength() + "")
-        .replaceAll("%rarity%", fish.getRarity().getDisplayName())
-        .replaceAll("%rarity_color%", fish.getRarity().getColor() + "")
-        .replaceAll("%fish%", fish.getName())
-        .replaceAll("%fish_with_rarity%",
-            ((fish.getRarity().isNoDisplay()) ? "" : fish.getRarity().getDisplayName() + " ") + fish
-                .getName());
+        .replaceAll("%rarity%", fish.getFish().getRarity().getDisplayName())
+        .replaceAll("%rarity_color%", fish.getFish().getRarity().getColor() + "")
+        .replaceAll("%fish%", fish.getFish().getName());
 
     message = ChatColor.translateAlternateColorCodes('&', message);
 
     return message;
   }
 
-  private Set<Player> getMessageReceivers(int announceValue, Player catcher) {
-    Set<Player> players = new HashSet<>();
-
-    switch (announceValue) {
-      case 0:
-        break;
-      case -1:
-        players.addAll(plugin.getServer().getOnlinePlayers());
-        break;
-      default:
-        Location loc = catcher.getLocation();
-
-        for (Player player : catcher.getWorld().getPlayers()) {
-          if (player.getLocation().distance(loc) <= announceValue) {
-            players.add(player);
-          }
-        }
-    }
-
-    if (plugin.getConfig().getBoolean("messages.only-announce-fishing-rod")) {
-      players.removeIf(
-          player -> player.getInventory().getItemInMainHand().getType() != Material.FISHING_ROD);
-    }
-
-    return players;
-  }
-
   private void executeCommands(Player player, CaughtFish fish) {
-    for (String command : fish.getCommands()) {
+    for (String command : fish.getFish().getCommands()) {
       String str = command.replaceAll("@p", player.getName())
-          .replaceAll("%fish%", fish.getName())
+          .replaceAll("%fish%", fish.getFish().getName())
           .replaceAll("%length%", fish.getLength() + "");
 
       str = ChatColor.translateAlternateColorCodes('&', str);

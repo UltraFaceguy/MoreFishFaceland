@@ -10,19 +10,14 @@ import me.elsiff.morefish.hooker.PlaceholderAPIHooker;
 import me.elsiff.morefish.hooker.StrifeHooker;
 import me.elsiff.morefish.hooker.VaultHooker;
 import me.elsiff.morefish.hooker.WorldGuardHooker;
-import me.elsiff.morefish.listener.FishShopGUI;
 import me.elsiff.morefish.listener.FishingListener;
 import me.elsiff.morefish.listener.PlayerListener;
-import me.elsiff.morefish.listener.RewardsGUI;
-import me.elsiff.morefish.listener.SignListener;
 import me.elsiff.morefish.listener.TreasureListener;
-import me.elsiff.morefish.manager.BossBarManager;
 import me.elsiff.morefish.manager.ContestManager;
 import me.elsiff.morefish.manager.FishManager;
 import me.elsiff.morefish.pojo.FishConfiguration;
 import me.elsiff.morefish.protocol.UpdateChecker;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
@@ -35,11 +30,8 @@ public class MoreFish extends JavaPlugin {
   private int taskId = -1;
 
   private FishConfiguration fishConfiguration;
-  private RewardsGUI rewardsGUI;
-  private FishShopGUI fishShopGUI;
   private FishManager fishManager;
   private ContestManager contestManager;
-  private BossBarManager bossBarManager;
   private UpdateChecker updateChecker;
 
   private VaultHooker vaultHooker;
@@ -65,15 +57,9 @@ public class MoreFish extends JavaPlugin {
 
     updateConfigFiles();
 
-    this.rewardsGUI = new RewardsGUI(this);
     this.fishManager = new FishManager(this);
     this.contestManager = new ContestManager(this);
     this.updateChecker = new UpdateChecker(this);
-
-    // For 1.9+
-    if (getConfig().getBoolean("general.use-boss-bar") && Material.getMaterial("SHIELD") != null) {
-      this.bossBarManager = new BossBarManager(this);
-    }
 
     getCommand("morefish").setExecutor(new GeneralCommands(this));
 
@@ -81,7 +67,6 @@ public class MoreFish extends JavaPlugin {
     manager.registerEvents(new FishingListener(this), this);
     manager.registerEvents(new PlayerListener(this), this);
     manager.registerEvents(new TreasureListener(), this);
-    manager.registerEvents(rewardsGUI, this);
 
     if (manager.getPlugin("Vault") != null && manager.getPlugin("Vault").isEnabled()) {
       vaultHooker = new VaultHooker(this);
@@ -113,10 +98,7 @@ public class MoreFish extends JavaPlugin {
       lootHooker = new LootHooker();
       getLogger().info("Found Loot for treasure support.");
     }
-
-    loadFishShop();
     scheduleAutoRunning();
-
     getLogger().info("Plugin has been enabled!");
   }
 
@@ -138,22 +120,6 @@ public class MoreFish extends JavaPlugin {
     if (fishConfiguration.getFishVersion() != verFish) {
       // Update
       console.sendMessage(String.format(msg, fishConfiguration.getFishPath()));
-    }
-    if (fishConfiguration.getRarityVersion() != verRarity) {
-      // Update
-      console.sendMessage(String.format(msg, fishConfiguration.getRarityPath()));
-    }
-  }
-
-  public void loadFishShop() {
-    if (this.fishShopGUI != null) {
-      return;
-    }
-
-    if (hasEconomy() && getConfig().getBoolean("fish-shop.enable")) {
-      this.fishShopGUI = new FishShopGUI(this);
-      manager.registerEvents(new SignListener(this), this);
-      manager.registerEvents(fishShopGUI, this);
     }
   }
 
@@ -205,14 +171,6 @@ public class MoreFish extends JavaPlugin {
     return contestManager;
   }
 
-  public BossBarManager getBossBarManager() {
-    return bossBarManager;
-  }
-
-  public boolean hasBossBar() {
-    return (getBossBarManager() != null);
-  }
-
   public UpdateChecker getUpdateChecker() {
     return updateChecker;
   }
@@ -250,14 +208,6 @@ public class MoreFish extends JavaPlugin {
     builder.append(getFishConfiguration().getString("time-format-seconds"));
 
     return builder.toString();
-  }
-
-  public RewardsGUI getRewardsGUI() {
-    return rewardsGUI;
-  }
-
-  public FishShopGUI getFishShopGUI() {
-    return fishShopGUI;
   }
 
   public boolean hasEconomy() {

@@ -1,70 +1,27 @@
 package me.elsiff.morefish.pojo;
 
-import org.bukkit.ChatColor;
+import com.tealcube.minecraft.bukkit.facecore.utilities.FaceColor;
+import lombok.Data;
 
+@Data
 public class Rarity {
 
-  private final String name;
+  private final String id;
   private final String displayName;
   private final double weight;
-  private final double bonusWeight;
-  private final ChatColor color;
-  private final double additionalPrice;
-  private final boolean noBroadcast;
-  private final boolean noDisplay;
-  private final boolean firework;
+  private final double xpMult;
+  private final boolean broadcast;
+  private final int baseTicksLived;
+  private final FaceColor color;
 
-  public Rarity(Rarity rarity, double weight) {
-    this(rarity.name, rarity.displayName, weight, rarity.bonusWeight, rarity.color, rarity.additionalPrice,
-        rarity.noBroadcast, rarity.noDisplay, rarity.firework);
-  }
-
-  public Rarity(String name, String displayName, double weight, double bonusWeight, ChatColor color,
-      double additionalPrice, boolean noBroadcast, boolean noDisplay, boolean firework) {
-    this.name = name;
+  public Rarity(String id, String displayName, double weight, double xpMult,
+      boolean broadcast, int baseTicksLived, FaceColor color) {
+    this.id = id;
     this.displayName = displayName;
     this.weight = weight;
-    this.bonusWeight = bonusWeight;
+    this.xpMult = xpMult;
+    this.broadcast = broadcast;
+    this.baseTicksLived = baseTicksLived;
     this.color = color;
-    this.additionalPrice = additionalPrice;
-    this.noBroadcast = noBroadcast;
-    this.noDisplay = noDisplay;
-    this.firework = firework;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public String getDisplayName() {
-    return displayName;
-  }
-
-  public double getWeight() {
-    return weight;
-  }
-
-  public double getBonusWeight() {
-    return bonusWeight;
-  }
-
-  public ChatColor getColor() {
-    return color;
-  }
-
-  public double getAdditionalPrice() {
-    return additionalPrice;
-  }
-
-  public boolean isNoBroadcast() {
-    return noBroadcast;
-  }
-
-  public boolean isNoDisplay() {
-    return noDisplay;
-  }
-
-  public boolean hasFirework() {
-    return firework;
   }
 }

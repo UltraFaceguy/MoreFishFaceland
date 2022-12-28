@@ -1,9 +1,15 @@
 package me.elsiff.morefish.manager;
 
+import com.tealcube.minecraft.bukkit.facecore.utilities.FaceColor;
+import com.tealcube.minecraft.bukkit.facecore.utilities.PaletteUtil;
+import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
+import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
+import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,10 +18,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import land.face.learnin.LearninBooksPlugin;
+import land.face.learnin.objects.LoadedKnowledge;
 import land.face.strife.data.champion.LifeSkillType;
 import land.face.strife.util.PlayerDataUtil;
 import me.elsiff.morefish.MoreFish;
-import me.elsiff.morefish.condition.BiomeCondition;
 import me.elsiff.morefish.condition.Condition;
 import me.elsiff.morefish.condition.ContestCondition;
 import me.elsiff.morefish.condition.EnchantmentCondition;
@@ -27,129 +34,197 @@ import me.elsiff.morefish.condition.PotionEffectCondition;
 import me.elsiff.morefish.condition.RainingCondition;
 import me.elsiff.morefish.condition.ThunderingCondition;
 import me.elsiff.morefish.condition.TimeCondition;
-import me.elsiff.morefish.condition.WGRegionCondtion;
+import me.elsiff.morefish.hooker.WorldGuardHooker;
 import me.elsiff.morefish.pojo.CaughtFish;
 import me.elsiff.morefish.pojo.CustomFish;
+import me.elsiff.morefish.pojo.FishZone;
 import me.elsiff.morefish.pojo.Rarity;
 import me.elsiff.morefish.util.IdentityUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.attribute.AttributeModifier.Operation;
 import org.bukkit.block.Biome;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.potion.PotionEffectType;
 
 public class FishManager {
 
   private final MoreFish plugin;
   private final Random random = new Random();
-  private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yy HH:mm");
-  private final List<Rarity> rarityList = new ArrayList<>();
+  private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yy");
+
+  private final Map<String, Rarity> rarityMap = new HashMap<>();
+  private final Map<String, FishZone> fishZoneMap = new HashMap<>();
   private final Map<String, CustomFish> fishMap = new HashMap<>();
-  private final Map<Rarity, List<CustomFish>> rarityMap = new HashMap<>();
+
+  private final Map<Integer, Double> totalWeightMap = new HashMap<>();
+
+  private final double smallestRarityWeight;
 
   public FishManager(MoreFish plugin) {
     this.plugin = plugin;
-    loadFishList();
-  }
-
-  public void loadFishList() {
+    fishZoneMap.clear();
     fishMap.clear();
     rarityMap.clear();
 
-    loadRarities(plugin.getFishConfiguration().getRarityConfig());
-    loadFish(plugin.getFishConfiguration().getFishConfig());
+    loadZones(plugin.getFishConfiguration().getFishZoneYaml());
+    plugin.getLogger().info("Loaded " + fishZoneMap.size() + " zones successfully.");
 
-    plugin.getLogger().info("Loaded " + rarityList.size() + " fish rarities successfully.");
+    loadRarities(plugin.getConfig());
+    plugin.getLogger().info("Loaded " + rarityMap.size() + " fish rarities successfully.");
+
+    loadFish();
     plugin.getLogger().info("Loaded " + fishMap.size() + " fish successfully.");
+
+    buildFishKnowledge();
+
+    double newSmallest = Integer.MAX_VALUE;
+    for (Rarity r : rarityMap.values()) {
+      if (r.getWeight() < newSmallest) {
+        newSmallest = r.getWeight();
+      }
+      Set<CustomFish> fishes = new HashSet<>(fishMap.values());
+      filterByRarity(fishes, r);
+      for (Biome b : Biome.values()) {
+        Set<CustomFish> fishes2 = new HashSet<>(fishes);
+        filterByBiome(fishes2, b);
+        if (fishes2.size() < 2) {
+          Bukkit.getLogger().warning("Only " + fishes2.size() + " possible outcomes for biome:" + b + " with rarity:" + r.getId());
+        }
+      }
+    }
+    smallestRarityWeight = newSmallest;
+  }
+
+  private void loadZones(FileConfiguration config) {
+    ConfigurationSection zones = config.getConfigurationSection("biome-zones");
+    for (String key : zones.getKeys(false)) {
+      FishZone zone = new FishZone();
+      zone.setId(key);
+      for (String s : zones.getStringList(key)) {
+        zone.getBiome().add(Biome.valueOf(s));
+      }
+      fishZoneMap.put(key, zone);
+    }
   }
 
   private void loadRarities(FileConfiguration config) {
-    ConfigurationSection rarities = config.getConfigurationSection("rarity-list");
+    ConfigurationSection rarities = config.getConfigurationSection("rarity");
 
-    for (String path : rarities.getKeys(false)) {
-      String displayName = rarities.getString(path + ".display-name");
-      double weight = rarities.getDouble(path + ".weight");
-      double bonusWeight = rarities.getDouble(path + ".level-weight");
-      ChatColor color = ChatColor.valueOf(rarities.getString(path + ".color").toUpperCase());
+    for (String key : rarities.getKeys(false)) {
+      String displayName = rarities.getString(key + ".text");
+      double weight = rarities.getDouble(key + ".weight");
+      double xpMult = rarities.getDouble(key + ".xp");
+      FaceColor color = FaceColor.valueOf(rarities.getString(key + ".color").toUpperCase());
+      boolean broadcast = rarities.getBoolean(key + ".broadcast", false);
+      int baseTicksLived = rarities.getInt(key + ".base-ticks-lived");
 
-      double additionalPrice = rarities.getDouble(path + ".additional-price", 0D);
-      boolean noBroadcast = rarities.getBoolean(path + ".no-broadcast", true);
-      boolean noDisplay = rarities.getBoolean(path + ".no-display");
-      boolean firework = rarities.getBoolean(path + ".firework", false);
-
-      Rarity rarity = new Rarity(path, displayName, weight, bonusWeight, color, additionalPrice,
-          noBroadcast, noDisplay, firework);
-
-      rarityList.add(rarity);
+      Rarity rarity = new Rarity(key, displayName, weight, xpMult, broadcast, baseTicksLived, color);
+      Bukkit.getLogger().info("aaaassasaqw " + key);
+      rarityMap.put(key, rarity);
     }
   }
 
-  private void loadFish(FileConfiguration config) {
-    List<Rarity> invalidRarities = new ArrayList<>();
-    for (Rarity rarity : rarityList) {
-      List<CustomFish> fishList = new ArrayList<>();
-      ConfigurationSection section = config
-          .getConfigurationSection("fish-list." + rarity.getName().toLowerCase());
-      if (section == null) {
-        plugin.getLogger().severe("No section/fish found for rarity " + rarity.getName() + "!");
-        invalidRarities.add(rarity);
+  private void loadFish() {
+    File fishFolder = new File(plugin.getDataFolder(), "fish");
+    File[] files = fishFolder.listFiles();
+    for (File f : files) {
+      String fileName = f.getName().replace(".yml", "");
+      Bukkit.getLogger().info("??? " + fileName);
+      Bukkit.getLogger().info("22222 " + fileName);
+
+      if (!rarityMap.containsKey(fileName)) {
+        Bukkit.getLogger().warning("[FaceFish] Fish file " + fileName +
+            " does not match an existing rarity. Skipping....");
         continue;
       }
-      for (String path : section.getKeys(false)) {
-        CustomFish fish = createCustomFish(section, path, rarity);
-        fishList.add(fish);
-        fishMap.put(fish.getInternalName(), fish);
+      YamlConfiguration config = new YamlConfiguration();
+      try {
+        config.load(f);
+      } catch (Exception e) {
+        continue;
       }
-      rarityMap.put(rarity, fishList);
-    }
-    for (Rarity r : invalidRarities) {
-      rarityList.remove(r);
+      ConfigurationSection section = config.getConfigurationSection("");
+      for (String fishId : section.getKeys(false)) {
+        Rarity rarity = rarityMap.get(fileName);
+        Bukkit.getLogger().info("fishid: " + fishId);
+        Bukkit.getLogger().warning("aaaa " + rarity);
+        Bukkit.getLogger().warning("bbbb " + fileName);
+        CustomFish fish = createCustomFish(section, fishId, rarity);
+        Bukkit.getLogger().info("fishbiomes " + fish.getBiomes());
+        fishMap.put(fishId, fish);
+      }
     }
   }
 
-  private CustomFish createCustomFish(ConfigurationSection section, String path, Rarity rarity) {
-    String displayName = section.getString(path + ".display-name", "");
-    double lengthMin = section.getDouble(path + ".length-min");
-    double lengthMax = section.getDouble(path + ".length-max");
-    double fishingExp = section.getDouble(path + ".fish-exp", 0);
-    ItemStack icon = getIcon(section, path);
-    boolean skipItemFormat = section.getBoolean(path + ".skip-item-format", false);
+  private void buildFishKnowledge() {
+    LearninBooksPlugin.instance.getKnowledgeManager().purgeKnowledge("more-fish");
+    List<LoadedKnowledge> knowledges = new ArrayList<>();
+    for (CustomFish fish : fishMap.values()) {
+      String name = ChatColor.AQUA + fish.getName() + " [WIP]";
+      String lore1 = TextUtils.color("&4&l&nFish Info (Size)\n\n&0Min. Size: " +
+          fish.getLengthMin() + "cm\n\n&0Max. Size: " + fish.getLengthMax() + "cm");
+      String lore2 = TextUtils.color(
+          "&4&l&nFish Info (Location)\n\n" + "&0Sadly, there's nothing here!");
+      String lore3 = TextUtils.color(
+          "&4&l&nFish Info (Effects)\n\n" + "&0Sadly, there's nothing here!");
+      List<String> desc = new ArrayList<>();
+      desc.add("");
+      desc.add("&fKnowledge Type: &bFish");
+      desc.add("");
+      desc.add("&7Click to view what you've");
+      desc.add("&7learned from this fish!");
+      desc.add("");
+      LoadedKnowledge fishInfo = new LoadedKnowledge(
+          fish.getId(), name, 500 + (int) fish.getLengthMax(), 1, 5, 25,
+          lore1, lore2, lore3, TextUtils.color(desc));
+      fishInfo.setSource("more-fish");
+      knowledges.add(fishInfo);
+    }
+    LearninBooksPlugin.instance.getKnowledgeManager().addExternalKnowledge(knowledges);
+  }
+
+  private CustomFish createCustomFish(ConfigurationSection section, String key, Rarity rarity) {
+    String displayName = section.getString(key + ".display-name", "");
+    double lengthMin = section.getDouble(key + ".length-min");
+    double lengthMax = section.getDouble(key + ".length-max");
+    int modelData = section.getInt(key + ".model-data");
+    List<String> lore = section.getStringList(key + ".lore");
+    List<String> location = section.getStringList(key + ".location");
+    Set<String> regions = new HashSet<>(section.getStringList(key + ".region"));
+
+    Set<Biome> biomes = new HashSet<>();
+    for (String s : location) {
+      if (fishZoneMap.containsKey(s)) {
+        biomes.addAll(fishZoneMap.get(s).getBiome());
+      } else {
+        Bukkit.getLogger().warning("[FaceFish] Invalid location for fish " + key);
+      }
+    }
+
     List<String> commands = new ArrayList<>();
-    CustomFish.FoodEffects foodEffects = new CustomFish.FoodEffects();
     List<Condition> conditions = new ArrayList<>();
 
-    if (section.contains(path + ".command")) {
-      commands.addAll(section.getStringList(path + ".command"));
+    if (section.contains(key + ".command")) {
+      commands.addAll(section.getStringList(key + ".command"));
     }
-    if (section.contains(path + ".commands")) {
-      commands.addAll(section.getStringList(path + ".commands"));
-    }
-
-    if (section.contains(path + ".food-effects")) {
-      if (section.contains(path + ".food-effects.points")) {
-        foodEffects.setPoints(section.getInt(path + ".food-effects.points"));
-      }
-
-      if (section.contains(path + ".food-effects.saturation")) {
-        foodEffects.setSaturation((float) section.getDouble(path + ".food-effects.saturation"));
-      }
-
-      if (section.contains(path + ".food-effects.commands")) {
-        foodEffects.setCommands(section.getStringList(path + ".food-effects.commands"));
-      }
+    if (section.contains(key + ".commands")) {
+      commands.addAll(section.getStringList(key + ".commands"));
     }
 
-    if (section.contains(path + ".conditions")) {
-      List<String> list = section.getStringList(path + ".conditions");
+    if (section.contains(key + ".conditions")) {
+      List<String> list = section.getStringList(key + ".conditions");
 
       for (String content : list) {
         Condition condition = getCondition(content);
@@ -157,74 +232,8 @@ public class FishManager {
       }
     }
 
-    return new CustomFish(path, displayName, lengthMin, lengthMax, icon, skipItemFormat,
-        commands, foodEffects, conditions, rarity, fishingExp);
-  }
-
-  private ItemStack getIcon(ConfigurationSection section, String path) {
-    String id = section.getString(path + ".icon.id", "");
-    Material material;
-    try {
-      material = Material.valueOf(id);
-    } catch (Exception e) {
-      plugin.getLogger().warning("Fish: " + path + " | Invalid Material: " + id);
-      return null;
-    }
-
-    int amount = 1;
-    if (section.contains(path + ".icon.amount")) {
-      amount = section.getInt(path + ".icon.amount");
-    }
-
-    short durability = 0;
-    if (section.contains(path + ".icon.durability")) {
-      durability = (short) section.getInt(path + ".icon.durability");
-    }
-
-    ItemStack itemStack = new ItemStack(material, amount);
-    if (itemStack.getItemMeta() instanceof Damageable) {
-      ((Damageable) itemStack.getItemMeta()).setDamage(durability);
-    }
-    ItemMeta meta = itemStack.getItemMeta();
-
-    if (section.contains(path + ".icon.lore")) {
-      List<String> lore = new ArrayList<>();
-      for (String line : section.getStringList(path + ".icon.lore")) {
-        lore.add(ChatColor.translateAlternateColorCodes('&', line));
-      }
-      meta.setLore(lore);
-    }
-
-    if (section.contains(path + ".icon.enchantments")) {
-      for (String content : section.getStringList(path + ".icon.enchantments")) {
-        String[] values = content.split("\\|");
-        Enchantment ench = IdentityUtils.getEnchantment(values[0].toLowerCase());
-        int lv = Integer.parseInt(values[1]);
-        meta.addEnchant(ench, lv, true);
-      }
-    }
-
-    if (section.contains(path + ".icon.unbreakable")) {
-      boolean value = section.getBoolean(path + ".icon.unbreakable");
-      meta.setUnbreakable(value);
-    }
-
-    if (section.contains(path + ".icon.skull-name")) {
-      SkullMeta skullMeta = (SkullMeta) meta;
-      skullMeta.setOwner(section.getString(path + ".icon.skull-name"));
-    }
-
-    int customData = section.getInt("icon.custom-model-data", -1);
-    if (customData != -1) {
-      meta.setCustomModelData(customData);
-    }
-
-    itemStack.setItemMeta(meta);
-
-    if (itemStack.getItemMeta() == null) {
-      plugin.getLogger().severe("Item found at section '" + section + "' path '" + path + "' is invalid!");
-    }
-    return itemStack;
+    return new CustomFish(key, displayName, lengthMin, lengthMax, modelData, lore,
+        commands, conditions, rarity, biomes, regions);
   }
 
   private Condition getCondition(String content) {
@@ -244,9 +253,6 @@ public class FishManager {
       case "time":
         String time = values[1].toLowerCase();
         condition = new TimeCondition(time);
-        break;
-      case "biome":
-        condition = new BiomeCondition(getBiomes(values));
         break;
       case "enchantment":
         Enchantment ench = IdentityUtils.getEnchantment(values[1].toLowerCase());
@@ -274,10 +280,6 @@ public class FishManager {
         int maxHeight = Integer.parseInt(values[2]);
         condition = new HeightCondition(minHeight, maxHeight);
         break;
-      case "worldguard_region":
-        String regionId = values[1];
-        condition = new WGRegionCondtion(regionId);
-        break;
       case "fishing_skill":
         int skill = Integer.parseInt(values[1]);
         condition = new FishingSkillCondition(skill);
@@ -288,68 +290,89 @@ public class FishManager {
     return condition;
   }
 
+  public void filterByBiome(Collection<CustomFish> fish, Biome biome) {
+    fish.removeIf(cf -> !cf.getBiomes().contains(biome));
+  }
+
+  public void filterByRarity(Collection<CustomFish> fish, Rarity rarity) {
+    fish.removeIf(cf -> cf.getRarity() != rarity);
+  }
+
+  public void filterByConditions(Collection<CustomFish> fish, Location loc, Player player) {
+    fish.removeIf(cf -> {
+      for (Condition condition : cf.getConditions()) {
+        if (!condition.isSatisfying(player, loc)) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  public void filterByRegion(Collection<CustomFish> fish, Location loc) {
+    WorldGuardHooker hooker = MoreFish.getInstance().getWorldGuardHooker();
+    fish.removeIf(cf -> {
+      if (cf.getRegions().isEmpty()) {
+        return false;
+      }
+      for (String s : cf.getRegions()) {
+        if (hooker.containsLocation(loc, s)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
   public CaughtFish generateRandomFish(Player catcher, Location location) {
     // TODO: Only set level if strife is loaded
     double rodLuck = getLuckFromPlayer(catcher);
-    Rarity rarity = getRandomRarity(
-        PlayerDataUtil.getEffectiveLifeSkill(catcher, LifeSkillType.FISHING, true), rodLuck);
-    CustomFish type = getRandomFish(rarity, catcher, location);
-    return createCaughtFish(type, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
+    Rarity rarity = getRandomRarity(PlayerDataUtil.getEffectiveLifeSkill(
+        catcher, LifeSkillType.FISHING, true), rodLuck);
+
+    List<CustomFish> fishes = new ArrayList<>(fishMap.values());
+    filterByRarity(fishes, rarity);
+    filterByBiome(fishes, location.getBlock().getBiome());
+    filterByRegion(fishes, location);
+    filterByConditions(fishes, location, catcher);
+
+    if (fishes.size() < 1) {
+      Bukkit.getLogger().warning("[FaceFish] No fish found!? Biome:" + location.getBlock().getBiome() + " Rarity:" + rarity.getId());
+      return null;
+    }
+
+    CustomFish fish = fishes.get(random.nextInt(fishes.size()));
+    return createCaughtFish(fish, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
   }
 
   public CustomFish getCustomFish(String name) {
     return fishMap.get(name);
   }
 
-  public ItemStack getItemStack(CaughtFish fish, String fisher) {
-    ItemStack itemStack = fish.getIcon();
-    ItemMeta meta = itemStack.getItemMeta();
+  public ItemStack buildItemFromFish(CaughtFish fish, String fisher) {
 
-    if (!fish.hasNoItemFormat()) {
-      FileConfiguration config = plugin.getFishConfiguration().getFishConfig();
+    ItemStack itemStack = new ItemStack(Material.KELP);
+    Rarity rarity = fish.getFish().getRarity();
 
-      String displayName = config.getString("item-format.display-name")
-          .replaceAll("%player%", fisher)
-          .replaceAll("%rarity%", fish.getRarity().getDisplayName())
-          .replaceAll("%rarity_color%", fish.getRarity().getColor() + "")
-          .replaceAll("%fish%", fish.getName());
-      displayName = ChatColor.translateAlternateColorCodes('&', displayName);
-      meta.setDisplayName(displayName + encodeFishData(fish));
-
-      List<String> lore = new ArrayList<>();
-      for (String str : config.getStringList("item-format.lore")) {
-        String line = str
-            .replaceAll("%player%", fisher)
-            .replaceAll("%rarity%", fish.getRarity().getDisplayName())
-            .replaceAll("%rarity_color%", fish.getRarity().getColor() + "")
-            .replaceAll("%length%", fish.getLength() + "")
-            .replaceAll("%fish%", fish.getName())
-            .replaceAll("%date%", dateFormat.format(new Date()));
-
-        line = ChatColor.translateAlternateColorCodes('&', line);
-        lore.add(line);
-      }
-      if (meta.hasLore()) {
-        lore.addAll(meta.getLore());
-      }
-      meta.setLore(lore);
+    String name = rarity.getColor() + fish.getFish().getName() + " (" + fish.getLength() + "cm)";
+    List<String> lore = new ArrayList<>();
+    lore.add("|white|" + rarity.getDisplayName() + "ɾ");
+    lore.add("");
+    lore.add("|yellow|Caught By: |white|" + fisher);
+    lore.add("|yellow|Catch Date: |white|" + dateFormat.format(new Date()));
+    if (fish.getFish().getLore().size() > 0) {
+      lore.add("");
+      lore.addAll(fish.getFish().getLore());
     }
+    TextUtils.setLore(itemStack, PaletteUtil.color(lore), false);
+    ItemStackExtensionsKt.setDisplayName(itemStack, name);
+    ItemStackExtensionsKt.setCustomModelData(itemStack, fish.getFish().getModelData());
 
-    itemStack.setItemMeta(meta);
+    // Ensure no stacking
+    itemStack.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+    ItemStackExtensionsKt.addAttributeModifier(itemStack, Attribute.GENERIC_ARMOR_TOUGHNESS,
+        new AttributeModifier(UUID.randomUUID(), "sneed", Math.random(), Operation.ADD_NUMBER));
     return itemStack;
-  }
-
-  public CaughtFish getCaughtFish(ItemStack itemStack) {
-    if (!itemStack.hasItemMeta() || !itemStack.getItemMeta().hasDisplayName()) {
-      return null;
-    }
-
-    String displayName = itemStack.getItemMeta().getDisplayName();
-    return decodeFishData(displayName);
-  }
-
-  public boolean isCustomFish(ItemStack itemStack) {
-    return (getCaughtFish(itemStack) != null);
   }
 
   private CaughtFish createCaughtFish(CustomFish fish, OfflinePlayer catcher, boolean lucky) {
@@ -365,103 +388,18 @@ public class FishManager {
     return new CaughtFish(fish, length, catcher);
   }
 
-  private Rarity getRandomRarity(double level, double luck) {
-    int skillAndLuckBonus = (int) (level + luck);
+  private Rarity getRandomRarity(double skillLevel, double luck) {
+    double bonus = skillLevel + luck;
     double cur = 0.0D;
-    double randomVar = random.nextDouble() * getTotalRarity(skillAndLuckBonus);
-    for (Rarity rarity : rarityList) {
-      cur += getAdjustedWeight(rarity, skillAndLuckBonus);
+    double randomVar = random.nextDouble() * getTotalRarity(bonus);
+    double multiplier = 1 + (Math.floor(bonus) / 100);
+    for (Rarity rarity : rarityMap.values()) {
+      cur += rarity.getWeight() + smallestRarityWeight * multiplier;
       if (cur >= randomVar) {
         return rarity;
       }
     }
     return null;
-  }
-
-  private CustomFish getRandomFish(Rarity rarity, Player player, Location location) {
-    List<CustomFish> fishList = new ArrayList<>();
-    for (CustomFish fish : rarityMap.get(rarity)) {
-      if (fish.getConditions().isEmpty()) {
-        fishList.add(fish);
-        continue;
-      }
-      boolean meetsConditions = true;
-      for (Condition condition : fish.getConditions()) {
-        if (!condition.isSatisfying(player, location)) {
-          meetsConditions = false;
-        }
-      }
-      if (meetsConditions) {
-        fishList.add(fish);
-      }
-    }
-    return fishList.get(random.nextInt(fishList.size()));
-  }
-
-  private String encodeFishData(CaughtFish fish) {
-    String data = "|"
-        .concat("name:" + fish.getInternalName() + "|")
-        .concat("length:" + fish.getLength() + "|")
-        .concat("catcher:" + fish.getCatcher().getUniqueId())
-        .replaceAll("", "§");
-    data = data.substring(0, data.length() - 1);
-    return data;
-  }
-
-  private CaughtFish decodeFishData(String displayName) {
-    String[] split = displayName.replaceAll("§", "").split("\\|");
-    if (split.length < 1) {
-      return null;
-    }
-
-    String name = null;
-    double length = 0.0D;
-    OfflinePlayer catcher = null;
-
-    for (int i = 1; i < split.length; i++) {
-      String[] arr = split[i].split(":");
-      if (arr.length < 2) {
-        break;
-      }
-
-      String key = arr[0];
-      String value = arr[1];
-
-      switch (key) {
-        case "name":
-          name = value;
-          break;
-        case "length":
-          length = Double.parseDouble(value);
-          break;
-        case "catcher":
-          catcher = plugin.getServer().getOfflinePlayer(UUID.fromString(value));
-          break;
-      }
-    }
-
-    if (name == null) {
-      return null;
-    }
-
-    CustomFish fish = getCustomFish(name);
-    if (fish == null) {
-      return null;
-    }
-
-    return new CaughtFish(fish, length, catcher);
-  }
-
-  private List<Biome> getBiomes(String[] values) {
-    List<Biome> biomes = new ArrayList<>();
-    for (int i = 1; i < values.length; i++) {
-      try {
-        biomes.add(Biome.valueOf(values[i].toUpperCase()));
-      } catch (Exception e) {
-        plugin.getLogger().severe("Error! Fish has invalid biome condition '" + values[i] + "'!");
-      }
-    }
-    return biomes;
   }
 
   private Set<Material> getMaterials(String[] values) {
@@ -470,22 +408,25 @@ public class FishManager {
       try {
         materials.add(Material.valueOf(values[i].toUpperCase()));
       } catch (Exception e) {
-        plugin.getLogger().severe("Error! Fish has invalid material condition '" + values[i] + "'!");
+        plugin.getLogger()
+            .severe("Error! Fish has invalid material condition '" + values[i] + "'!");
       }
     }
     return materials;
   }
 
-  private double getTotalRarity(int level) {
-    double total = 0;
-    for (Rarity r : rarityList) {
-      total += r.getWeight() + r.getBonusWeight() * level;
+  private double getTotalRarity(double bonus) {
+    int level = (int) bonus;
+    if (totalWeightMap.containsKey(level)) {
+      return totalWeightMap.get(level);
     }
+    double total = 0;
+    double multiplier = 1 + (Math.floor(bonus) / 100);
+    for (Rarity r : rarityMap.values()) {
+      total += r.getWeight() + smallestRarityWeight * multiplier;
+    }
+    totalWeightMap.put(level, total);
     return total;
-  }
-
-  private double getAdjustedWeight(Rarity rarity, int bonus) {
-    return rarity.getWeight() + rarity.getBonusWeight() * bonus;
   }
 
   private double getLuckFromPlayer(Player player) {
