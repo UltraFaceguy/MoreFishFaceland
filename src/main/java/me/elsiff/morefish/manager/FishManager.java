@@ -128,10 +128,9 @@ public class FishManager {
       double xpMult = rarities.getDouble(key + ".xp");
       FaceColor color = FaceColor.valueOf(rarities.getString(key + ".color").toUpperCase());
       boolean broadcast = rarities.getBoolean(key + ".broadcast", false);
-      int baseTicksLived = rarities.getInt(key + ".base-ticks-lived");
+      int baseTicksLived = rarities.getInt(key + ".base-ticks-lived", 1);
 
       Rarity rarity = new Rarity(key, displayName, weight, xpMult, broadcast, baseTicksLived, color);
-      Bukkit.getLogger().info("aaaassasaqw " + key);
       rarityMap.put(key, rarity);
     }
   }
@@ -141,8 +140,6 @@ public class FishManager {
     File[] files = fishFolder.listFiles();
     for (File f : files) {
       String fileName = f.getName().replace(".yml", "");
-      Bukkit.getLogger().info("??? " + fileName);
-      Bukkit.getLogger().info("22222 " + fileName);
 
       if (!rarityMap.containsKey(fileName)) {
         Bukkit.getLogger().warning("[FaceFish] Fish file " + fileName +
@@ -158,11 +155,7 @@ public class FishManager {
       ConfigurationSection section = config.getConfigurationSection("");
       for (String fishId : section.getKeys(false)) {
         Rarity rarity = rarityMap.get(fileName);
-        Bukkit.getLogger().info("fishid: " + fishId);
-        Bukkit.getLogger().warning("aaaa " + rarity);
-        Bukkit.getLogger().warning("bbbb " + fileName);
         CustomFish fish = createCustomFish(section, fishId, rarity);
-        Bukkit.getLogger().info("fishbiomes " + fish.getBiomes());
         fishMap.put(fishId, fish);
       }
     }
