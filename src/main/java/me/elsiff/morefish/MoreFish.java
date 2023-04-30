@@ -170,18 +170,22 @@ public class MoreFish extends JavaPlugin {
 
   public String getOrdinal(int number) {
     switch (number) {
-      case 1:
+      case 1 -> {
         return "1st";
-      case 2:
+      }
+      case 2 -> {
         return "2nd";
-      case 3:
+      }
+      case 3 -> {
         return "3rd";
-      default:
+      }
+      default -> {
         if (number > 20) {
           return (number / 10) + getOrdinal(number % 10);
         } else {
           return number + "th";
         }
+      }
     }
   }
 

@@ -95,11 +95,12 @@ public class ContestManager {
         Bukkit.getLogger().info("[MoreFish] Failed to find letter " + letterId + ", it's null.");
         return;
       }
-      boolean success = MailTimePlugin.getInstance().getLetterManager().sendLetter(letter, record.getPlayer());
-      if (success) {
-        PaletteUtil.sendMessage(record.getPlayer(),
-            "|lime|Your contest rewards have been sent to your mailbox!");
-      }
+      MailTimePlugin.getInstance().getLetterManager().sendManagedLetter(letter, record.getPlayer(), () -> {
+        if (record.getPlayer().isOnline()) {
+          PaletteUtil.sendMessage(record.getPlayer(),
+              "|lime|Your contest rewards have been sent to your mailbox!");
+        }
+      });
     }
   }
 
@@ -239,11 +240,11 @@ public class ContestManager {
 
       for (Player p : Bukkit.getOnlinePlayers()) {
         if (finished) {
-          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 3, 3, "", 0);
           StrifePlugin.getInstance().getBossBarManager().updateBar(p, 2, 3, "", 0);
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 3, 3, "", 0);
         } else {
-          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 3, 3, title, 25);
-          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 2, 3, latestBar, 25);
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 2, 3, title, 25);
+          StrifePlugin.getInstance().getBossBarManager().updateBar(p, 3, 3, latestBar, 25);
         }
       }
 

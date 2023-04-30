@@ -72,8 +72,8 @@ public class FishingListener implements Listener {
     maxTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.max-tier-items", 2);
     tierRarityBonus = plugin.getConfig().getInt("treasure.loot-items.item-rarity-bonus", 9000);
 
-    baseFishXp = plugin.getConfig().getDouble("general.xp-per-cm", 0.1);
-    fishXpPerCm = plugin.getConfig().getDouble("general.base-xp", 1);
+    baseFishXp = plugin.getConfig().getDouble("general.base-xp", 10);
+    fishXpPerCm = plugin.getConfig().getDouble("general.xp-per-cm", 0.5);
 
     customItemChances = new HashMap<>();
     ConfigurationSection section = plugin.getConfig()
@@ -217,8 +217,8 @@ public class FishingListener implements Listener {
   }
 
   private void executeFishingActions(Player catcher, PlayerFishEvent event) {
-    if (treasureChance + treasurePerLevel * PlayerDataUtil.getEffectiveLifeSkill(
-        catcher, LifeSkillType.FISHING, true) > Math.random()) {
+    if (treasureChance + treasurePerLevel * PlayerDataUtil.getSkillLevels(
+        catcher, LifeSkillType.FISHING, true).getLevelWithBonus() > Math.random()) {
       Item caught = (Item) event.getCaught();
       caught.setItemStack(buildTreasure(catcher));
       String msg = TextUtils.color(

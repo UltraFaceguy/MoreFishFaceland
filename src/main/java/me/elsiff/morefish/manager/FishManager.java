@@ -10,6 +10,7 @@ import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -183,6 +184,7 @@ public class FishManager {
           fish.getId(), name, 500 + (int) fish.getLengthMax(), 1, 5, 25,
           lore1, lore2, lore3, TextUtils.color(desc));
       fishInfo.setSource("more-fish");
+      fishInfo.setCategory("fish");
       knowledges.add(fishInfo);
     }
     LearninBooksPlugin.instance.getKnowledgeManager().addExternalKnowledge(knowledges);
@@ -235,50 +237,49 @@ public class FishManager {
     String conId = values[0];
 
     switch (conId) {
-      case "raining":
+      case "raining" -> {
         boolean raining = Boolean.parseBoolean(values[1]);
         condition = new RainingCondition(raining);
-        break;
-      case "thundering":
+      }
+      case "thundering" -> {
         boolean thundering = Boolean.parseBoolean(values[1]);
         condition = new ThunderingCondition(thundering);
-        break;
-      case "time":
+      }
+      case "time" -> {
         String time = values[1].toLowerCase();
         condition = new TimeCondition(time);
-        break;
-      case "enchantment":
+      }
+      case "enchantment" -> {
         Enchantment ench = IdentityUtils.getEnchantment(values[1].toLowerCase());
         int lv = Integer.parseInt(values[2]);
         condition = new EnchantmentCondition(ench, lv);
-        break;
-      case "level":
+      }
+      case "level" -> {
         int level = Integer.parseInt(values[1]);
         condition = new LevelCondition(level);
-        break;
-      case "contest":
+      }
+      case "contest" -> {
         boolean ongoing = Boolean.parseBoolean(values[1]);
         condition = new ContestCondition(ongoing);
-        break;
-      case "nearby_blocks":
-        condition = new NearbyBlockCondition(getMaterials(values));
-        break;
-      case "potioneffect":
+      }
+      case "nearby_blocks" -> condition = new NearbyBlockCondition(getMaterials(values));
+      case "potioneffect" -> {
         PotionEffectType effectType = IdentityUtils.getPotionEffectType(values[1]);
         int amplfier = Integer.parseInt(values[2]);
         condition = new PotionEffectCondition(effectType, amplfier);
-        break;
-      case "height":
+      }
+      case "height" -> {
         int minHeight = Integer.parseInt(values[1]);
         int maxHeight = Integer.parseInt(values[2]);
         condition = new HeightCondition(minHeight, maxHeight);
-        break;
-      case "fishing_skill":
+      }
+      case "fishing_skill" -> {
         int skill = Integer.parseInt(values[1]);
         condition = new FishingSkillCondition(skill);
-        break;
-      default:
+      }
+      default -> {
         return null;
+      }
     }
     return condition;
   }
@@ -320,8 +321,8 @@ public class FishManager {
   public CaughtFish generateRandomFish(Player catcher, Location location) {
     // TODO: Only set level if strife is loaded
     double rodLuck = getLuckFromPlayer(catcher);
-    Rarity rarity = getRandomRarity(PlayerDataUtil.getEffectiveLifeSkill(
-        catcher, LifeSkillType.FISHING, true), rodLuck);
+    Rarity rarity = getRandomRarity(PlayerDataUtil.getSkillLevels(catcher,
+        LifeSkillType.FISHING, true).getLevelWithBonus(), rodLuck);
 
     List<CustomFish> fishes = new ArrayList<>(fishMap.values());
     filterByRarity(fishes, rarity);
@@ -336,6 +337,17 @@ public class FishManager {
 
     CustomFish fish = fishes.get(random.nextInt(fishes.size()));
     return createCaughtFish(fish, catcher, catcher.hasPotionEffect(PotionEffectType.LUCK));
+  }
+
+  public Rarity getRarity(String id) {
+    return rarityMap.get(id);
+  }
+
+  public CustomFish getRandomFish(Rarity rarity) {
+    List<CustomFish> fishes = new ArrayList<>(fishMap.values());
+    filterByRarity(fishes, rarity);
+    Collections.shuffle(fishes);
+    return fishes.get(0);
   }
 
   public CustomFish getCustomFish(String name) {
