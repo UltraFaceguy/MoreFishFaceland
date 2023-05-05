@@ -243,7 +243,7 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
 
       String msg = format.replaceAll("%ordinal%", plugin.getOrdinal(i))
           .replaceAll("%number%", Integer.toString(i))
-          .replaceAll("%player%", record.getPlayer().getName())
+          .replaceAll("%player%", record.getName())
           .replaceAll("%length%", record.getLength() + "")
           .replaceAll("%fish%", record.getFishName());
 
@@ -276,7 +276,7 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
       msg = plugin.getFishConfiguration().getString("top-mine")
           .replaceAll("%ordinal%", plugin.getOrdinal(number))
           .replaceAll("%number%", Integer.toString(number))
-          .replaceAll("%player%", record.getPlayer().getName())
+          .replaceAll("%player%", record.getName())
           .replaceAll("%length%", record.getLength() + "")
           .replaceAll("%fish%", record.getFishName());
     } else {

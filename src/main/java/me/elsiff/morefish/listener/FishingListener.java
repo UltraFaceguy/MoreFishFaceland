@@ -109,7 +109,7 @@ public class FishingListener implements Listener {
       Bukkit.getServer().broadcastMessage(getMessage("catch-fish", event.getPlayer(), event.getFish()));
     }
     if (newLead) {
-      if (contest.getTopRecord() == null || contest.getTopRecord().getPlayer() != event.getPlayer()) {
+      if (contest.getTopRecord() == null || !event.getPlayer().getUniqueId().equals(contest.getTopRecord().getUuid())) {
         Bukkit.getServer().broadcastMessage(getMessage("get-1st", event.getPlayer(), event.getFish()));
       } else {
         Bukkit.getServer().broadcastMessage(getMessage("extend-lead", event.getPlayer(), event.getFish()));

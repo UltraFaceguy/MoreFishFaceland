@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import land.face.mail.MailTimePlugin;
 import land.face.mail.pojo.ManagedLetter;
 import land.face.strife.StrifePlugin;
@@ -95,12 +96,11 @@ public class ContestManager {
         Bukkit.getLogger().info("[MoreFish] Failed to find letter " + letterId + ", it's null.");
         return;
       }
-      MailTimePlugin.getInstance().getLetterManager().sendManagedLetter(letter, record.getPlayer(), () -> {
-        if (record.getPlayer().isOnline()) {
-          PaletteUtil.sendMessage(record.getPlayer(),
-              "|lime|Your contest rewards have been sent to your mailbox!");
-        }
-      });
+      Player p = Bukkit.getPlayer(record.getUuid());
+      if (p != null && p.isOnline()) {
+        MailTimePlugin.getInstance().getLetterManager().sendManagedLetter(letter, p, () ->
+            PaletteUtil.sendMessage(p, "|lime|Your contest rewards have been sent to your mailbox!"));
+      }
     }
   }
 
@@ -112,7 +112,7 @@ public class ContestManager {
   public void addRecord(Player player, CaughtFish fish) {
     Record replacedRecord = null;
     for (Record r : recordList) {
-      if (r.getPlayer() == player) {
+      if (player.getUniqueId().equals(r.getUuid())) {
         if (r.getLength() >= fish.getLength()) {
           return;
         } else {
@@ -141,7 +141,7 @@ public class ContestManager {
 
   public boolean hasRecord(OfflinePlayer player) {
     for (Record record : recordList) {
-      if (record.getPlayer().equals(player)) {
+      if (record.getUuid().equals(player)) {
         return true;
       }
     }
@@ -151,7 +151,7 @@ public class ContestManager {
 
   public double getRecordLength(Player player) {
     for (Record record : recordList) {
-      if (record.getPlayer().equals(player)) {
+      if (record.getUuid().equals(player)) {
         return record.getLength();
       }
     }
@@ -167,11 +167,10 @@ public class ContestManager {
 
   public int getNumber(OfflinePlayer player) {
     for (int i = 0; i < recordList.size(); i++) {
-      if (recordList.get(i).getPlayer().getUniqueId().equals(player.getUniqueId())) {
+      if (recordList.get(i).getUuid().equals(player.getUniqueId())) {
         return (i + 1);
       }
     }
-
     return 0;
   }
 
@@ -194,12 +193,15 @@ public class ContestManager {
   public class Record {
 
     @Getter
-    private final Player player;
+    private final UUID uuid;
+    @Getter
+    private final String name;
     @Getter
     private final CaughtFish fish;
 
     public Record(Player player, CaughtFish fish) {
-      this.player = player;
+      this.uuid = player.getUniqueId();
+      this.name = player.getName();
       this.fish = fish;
     }
 

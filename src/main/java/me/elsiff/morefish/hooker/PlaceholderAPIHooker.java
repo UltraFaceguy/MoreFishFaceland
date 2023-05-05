@@ -47,7 +47,7 @@ public class PlaceholderAPIHooker extends PlaceholderExpansion {
       }
       ContestManager.Record record = contest.getRecord(number);
 
-      return record.getPlayer().getName();
+      return record.getName();
     } else if (placeholder.startsWith("top_fish_")) {
       if (!contest.hasStarted()) {
         return "";
