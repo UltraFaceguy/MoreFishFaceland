@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import land.face.strife.StrifePlugin;
+import lombok.Getter;
 import me.elsiff.morefish.command.GeneralCommands;
 import me.elsiff.morefish.hooker.LootHooker;
 import me.elsiff.morefish.hooker.PlaceholderAPIHooker;
@@ -17,9 +18,11 @@ import me.elsiff.morefish.manager.ContestManager;
 import me.elsiff.morefish.manager.FishManager;
 import me.elsiff.morefish.pojo.FishConfiguration;
 import me.elsiff.morefish.protocol.UpdateChecker;
+import me.joshuaemq.TogglePickupsPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.event.HandlerList;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -39,6 +42,9 @@ public class MoreFish extends JavaPlugin {
   private WorldGuardHooker worldGuardHooker;
   private StrifeHooker strifeHooker;
   private LootHooker lootHooker;
+
+  @Getter
+  private TogglePickupsPlugin togglePickupsPlugin;
 
   public static void setInstance(MoreFish moreFish) {
     instance = moreFish;
@@ -76,6 +82,11 @@ public class MoreFish extends JavaPlugin {
       } else {
         vaultHooker = null;
       }
+    }
+
+    Plugin pickupPlugin = Bukkit.getServer().getPluginManager().getPlugin("TogglePickups");
+    if (pickupPlugin != null) {
+      togglePickupsPlugin = (TogglePickupsPlugin) pickupPlugin;
     }
 
     if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI")

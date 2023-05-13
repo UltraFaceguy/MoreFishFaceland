@@ -2,6 +2,7 @@ package me.elsiff.morefish.listener;
 
 import com.tealcube.minecraft.bukkit.facecore.utilities.ItemUtils;
 import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
+import info.faceland.loot.utils.DropUtil;
 import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -188,8 +189,16 @@ public class FishingListener implements Listener {
     }
     JobUtil.bumpTaskProgress(catcher, "mf_fish_rarity", fish.getFish().getRarity().getId());
     LearninBooksPlugin.instance.getKnowledgeManager().incrementKnowledge(catcher, fish.getFish().getId());
-    ItemUtils.giveOrDrop(catcher, fish.getFish().getRarity().getBaseTicksLived(),
-        plugin.getFishManager().buildItemFromFish(fish, catcher.getName()));
+
+    ItemStack result = plugin.getFishManager().buildItemFromFish(fish, catcher.getName());
+
+    if (plugin.getTogglePickupsPlugin() != null &&
+        !plugin.getTogglePickupsPlugin().getApi().playerCanPickUpItem(catcher, result)) {
+      ItemUtils.dropItem(catcher.getLocation(), result, catcher,
+          fish.getFish().getRarity().getBaseTicksLived(), null, null, false);
+    } else {
+      ItemUtils.giveOrDrop(catcher, fish.getFish().getRarity().getBaseTicksLived(), result);
+    }
 
     if (catcher.getEquipment().getItemInOffHand().getType() == Material.WHEAT_SEEDS) {
       baitOnCast.add(catcher.getUniqueId());
