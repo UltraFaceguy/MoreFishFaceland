@@ -3,6 +3,8 @@ package me.elsiff.morefish.manager;
 import com.tealcube.minecraft.bukkit.facecore.utilities.FaceColor;
 import com.tealcube.minecraft.bukkit.facecore.utilities.PaletteUtil;
 import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
+import com.tealcube.minecraft.bukkit.shade.apache.commons.lang.WordUtils;
+import com.tealcube.minecraft.bukkit.shade.apache.commons.lang3.StringUtils;
 import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.io.File;
 import java.math.BigDecimal;
@@ -41,6 +43,7 @@ import me.elsiff.morefish.pojo.CustomFish;
 import me.elsiff.morefish.pojo.FishZone;
 import me.elsiff.morefish.pojo.Rarity;
 import me.elsiff.morefish.util.IdentityUtils;
+import org.apache.logging.log4j.util.Strings;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -113,7 +116,8 @@ public class FishManager {
     for (String key : zones.getKeys(false)) {
       FishZone zone = new FishZone();
       zone.setId(key);
-      for (String s : zones.getStringList(key)) {
+      zone.setDescription(zones.getString(key + ".description", "Uhhhhhhhhh??"));
+      for (String s : zones.getStringList(key + ".biomes")) {
         zone.getBiome().add(Biome.valueOf(s));
       }
       fishZoneMap.put(key, zone);
@@ -166,13 +170,54 @@ public class FishManager {
     LearninBooksPlugin.instance.getKnowledgeManager().purgeKnowledge("more-fish");
     List<LoadedKnowledge> knowledges = new ArrayList<>();
     for (CustomFish fish : fishMap.values()) {
-      String name = ChatColor.AQUA + fish.getName() + " [WIP]";
-      String lore1 = TextUtils.color("&4&l&nFish Info (Size)\n\n&0Min. Size: " +
-          fish.getLengthMin() + "cm\n\n&0Max. Size: " + fish.getLengthMax() + "cm");
-      String lore2 = TextUtils.color(
-          "&4&l&nFish Info (Location)\n\n" + "&0Sadly, there's nothing here!");
-      String lore3 = TextUtils.color(
-          "&4&l&nFish Info (Effects)\n\n" + "&0Sadly, there's nothing here!");
+      String name = FaceColor.CYAN + fish.getName();
+
+      // LORE 1 BUILD
+      String lore1 = StringUtils.join(PaletteUtil.color(List.of(
+          "|teal||b||ul|" + fish.getName(),
+          "",
+          "|black|Rarity: |none|" + fish.getRarity().getDisplayName(),
+          "",
+          "|black|Min. Size: " + fish.getLengthMin() + "cm",
+          "|black|Max. Size: " + fish.getLengthMax() + "cm"
+      )), "\n");
+
+      // LORE 2 BUILD
+      List<String> lore2builder = new ArrayList<>(List.of(
+          "|teal||b||ul|" + fish.getName(),
+          "",
+          "|black|Water Conditions:"
+      ));
+      for (String s : fish.getBiomeDescs()) {
+        lore2builder.add("|black|- " + s);
+      }
+      lore2builder.add("");
+      lore2builder.add("|black|Specific Regions:");
+      if (fish.getRegions().isEmpty()) {
+        lore2builder.add("|black|- None");
+      } else {
+        for (String s : fish.getRegions()) {
+          lore2builder.add("|black|- " + WordUtils.capitalizeFully(s.replace("-", " ").replace("_", " ")));
+        }
+      }
+      String lore2 = StringUtils.join(PaletteUtil.color(lore2builder), "\n");
+
+      // LORE 3 BUILD
+      List<String> lore3builder = new ArrayList<>(List.of(
+          "|teal||b||ul|" + fish.getName(),
+          "",
+          "|black|Catch Conditions:"
+      ));
+      for (Condition condition : fish.getConditions()) {
+        lore3builder.add("|black|- " + condition.getDescription());
+      }
+      lore3builder.addAll(List.of("",
+          "|black|Cooking Recipes:",
+          "|black|- None"
+      ));
+      String lore3 = StringUtils.join(PaletteUtil.color(lore3builder), "\n");
+
+      // UI BUILD
       List<String> desc = new ArrayList<>();
       desc.add("");
       desc.add("&fKnowledge Type: &bFish");
@@ -200,9 +245,11 @@ public class FishManager {
     Set<String> regions = new HashSet<>(section.getStringList(key + ".region"));
 
     Set<Biome> biomes = new HashSet<>();
+    Set<String> biomeDescs = new HashSet<>();
     for (String s : location) {
       if (fishZoneMap.containsKey(s)) {
         biomes.addAll(fishZoneMap.get(s).getBiome());
+        biomeDescs.add(fishZoneMap.get(s).getDescription());
       } else {
         Bukkit.getLogger().warning("[FaceFish] Invalid location for fish " + key);
       }
@@ -228,7 +275,7 @@ public class FishManager {
     }
 
     return new CustomFish(key, displayName, lengthMin, lengthMax, modelData, lore,
-        commands, conditions, rarity, biomes, regions);
+        commands, conditions, rarity, biomes, biomeDescs, regions);
   }
 
   private Condition getCondition(String content) {

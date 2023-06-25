@@ -21,4 +21,9 @@ public class WGRegionCondtion implements Condition {
     WorldGuardHooker hooker = MoreFish.getInstance().getWorldGuardHooker();
     return (hooker != null && hooker.containsLocation(fishLocation, regionId));
   }
+
+  @Override
+  public String getDescription() {
+    return "";
+  }
 }

@@ -19,4 +19,9 @@ public class PotionEffectCondition implements Condition {
     return (player.hasPotionEffect(effectType) &&
         player.getPotionEffect(effectType).getAmplifier() >= amplifier);
   }
+
+  @Override
+  public String getDescription() {
+    return "Effect " + effectType.getName() + " Lv" + amplifier+1 + "+";
+  }
 }

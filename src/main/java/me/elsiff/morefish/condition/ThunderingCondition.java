@@ -15,4 +15,9 @@ public class ThunderingCondition implements Condition {
   public boolean isSatisfying(Player player, Location fishLocation) {
     return (thundering == player.getWorld().isThundering());
   }
+
+  @Override
+  public String getDescription() {
+    return thundering ? "Thunderstorms" : "Not storming";
+  }
 }

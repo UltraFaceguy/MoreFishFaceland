@@ -15,4 +15,9 @@ public class ContestCondition implements Condition {
     public boolean isSatisfying(Player player, Location fishLocation) {
         return (ongoing == MoreFish.getInstance().getContestManager().hasStarted());
     }
+
+    @Override
+    public String getDescription() {
+        return ongoing ? "Contests only" : "Hides from contests";
+    }
 }

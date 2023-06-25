@@ -2,7 +2,9 @@ package me.elsiff.morefish.listener;
 
 import com.tealcube.minecraft.bukkit.facecore.utilities.ItemUtils;
 import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
+import info.faceland.loot.LootPlugin;
 import info.faceland.loot.utils.DropUtil;
+import info.faceland.loot.utils.MaterialUtil;
 import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -192,6 +194,11 @@ public class FishingListener implements Listener {
 
     ItemStack result = plugin.getFishManager().buildItemFromFish(fish, catcher.getName());
 
+    if (Math.random() < 0.02) {
+      MaterialUtil.depleteEnchantment(catcher.getEquipment().getItemInOffHand(),
+          (Player) event.getMob().getEntity());
+    }
+
     if (plugin.getTogglePickupsPlugin() != null &&
         !plugin.getTogglePickupsPlugin().getApi().playerCanPickUpItem(catcher, result)) {
       ItemUtils.dropItem(catcher.getLocation(), result, catcher,
@@ -275,6 +282,10 @@ public class FishingListener implements Listener {
     Item caught = (Item) event.getCaught();
     caught.setItemStack(itemStack);
     caught.setTicksLived(fish.getFish().getRarity().getBaseTicksLived());
+
+    if (Math.random() < 0.02) {
+      MaterialUtil.depleteEnchantment(catcher.getEquipment().getItemInOffHand(), event.getPlayer());
+    }
 
     JobUtil.bumpTaskProgress(event.getPlayer(), "mf_fish", fish.getFish().getId());
     int fishScore = (int) (10 * Math.floor(fish.getLength() / 10));

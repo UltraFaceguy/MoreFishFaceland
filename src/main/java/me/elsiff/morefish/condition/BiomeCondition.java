@@ -19,4 +19,9 @@ public class BiomeCondition implements Condition {
     return (biomeList.contains(player.getWorld().getBiome(fishLocation.getBlockX(),
         fishLocation.getBlockY(), fishLocation.getBlockZ())));
   }
+
+  @Override
+  public String getDescription() {
+    return "";
+  }
 }

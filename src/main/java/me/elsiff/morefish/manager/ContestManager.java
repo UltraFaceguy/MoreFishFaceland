@@ -110,19 +110,14 @@ public class ContestManager {
   }
 
   public void addRecord(Player player, CaughtFish fish) {
-    Record replacedRecord = null;
     for (Record r : recordList) {
       if (player.getUniqueId().equals(r.getUuid())) {
-        if (r.getLength() >= fish.getLength()) {
-          return;
-        } else {
-          replacedRecord = r;
-          break;
+        if (!(r.getLength() >= fish.getLength())) {
+          r.replace(fish);
+          recordList.sort(comparator);
         }
+        return;
       }
-    }
-    if (replacedRecord != null) {
-      recordList.remove(replacedRecord);
     }
     recordList.add(new Record(player, fish));
     recordList.sort(comparator);
@@ -197,7 +192,7 @@ public class ContestManager {
     @Getter
     private final String name;
     @Getter
-    private final CaughtFish fish;
+    private CaughtFish fish;
 
     public Record(Player player, CaughtFish fish) {
       this.uuid = player.getUniqueId();
@@ -211,6 +206,10 @@ public class ContestManager {
 
     public double getLength() {
       return fish.getLength();
+    }
+
+    public void replace(CaughtFish newFish) {
+      fish = newFish;
     }
   }
 

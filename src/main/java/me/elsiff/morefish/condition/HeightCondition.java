@@ -18,4 +18,9 @@ public class HeightCondition implements Condition {
     int y = fishLocation.getBlockY();
     return (minHeight <= y) && (y <= maxHeight);
   }
+
+  @Override
+  public String getDescription() {
+    return "Height " + minHeight + "~" + maxHeight;
+  }
 }

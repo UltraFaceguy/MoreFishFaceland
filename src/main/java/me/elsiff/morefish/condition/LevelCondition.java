@@ -15,4 +15,9 @@ public class LevelCondition implements Condition {
   public boolean isSatisfying(Player player, Location fishLocation) {
     return (player.getLevel() >= level);
   }
+
+  @Override
+  public String getDescription() {
+    return "Requires Lv" + level + "+";
+  }
 }

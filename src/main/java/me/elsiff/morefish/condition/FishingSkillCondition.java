@@ -17,4 +17,9 @@ public class FishingSkillCondition implements Condition {
   public boolean isSatisfying(Player player, Location fishLocation) {
     return PlayerDataUtil.getLifeSkillLevel(player, LifeSkillType.FISHING) >= level;
   }
+
+  @Override
+  public String getDescription() {
+    return "Skill Lv" + level + "+";
+  }
 }

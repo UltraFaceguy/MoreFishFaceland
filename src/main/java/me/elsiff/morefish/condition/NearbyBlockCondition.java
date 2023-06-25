@@ -43,4 +43,9 @@ public class NearbyBlockCondition implements Condition {
     }
     return blocks;
   }
+
+  @Override
+  public String getDescription() {
+    return "Near specific blocks";
+  }
 }

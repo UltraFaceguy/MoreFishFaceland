@@ -14,13 +14,19 @@ public class TimeCondition implements Condition {
   @Override
   public boolean isSatisfying(Player player, Location fishLocation) {
     long tick = player.getWorld().getTime();
-    switch (time) {
-      case "day":
-        return (1000 <= tick && tick < 13000);
-      case "night":
-        return (13000 <= tick || tick < 1000);
-      default:
-        return false;
-    }
+    return switch (time) {
+      case "day" -> (1000 <= tick && tick < 13000);
+      case "night" -> (13000 <= tick || tick < 1000);
+      default -> false;
+    };
+  }
+
+  @Override
+  public String getDescription() {
+    return switch (time) {
+      case "day" -> "During the day";
+      case "night" -> "Night only";
+      default -> "";
+    };
   }
 }

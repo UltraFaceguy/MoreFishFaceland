@@ -15,4 +15,9 @@ public class RainingCondition implements Condition {
   public boolean isSatisfying(Player player, Location fishLocation) {
     return (raining == player.getWorld().hasStorm());
   }
+
+  @Override
+  public String getDescription() {
+    return raining ? "Raining" : "Clear skies";
+  }
 }

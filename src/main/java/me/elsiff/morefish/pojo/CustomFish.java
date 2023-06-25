@@ -19,11 +19,12 @@ public class CustomFish {
   private final List<Condition> conditions;
   private final Rarity rarity;
   private final Set<Biome> biomes;
+  private final Set<String> biomeDescs;
   private final Set<String> regions;
 
   public CustomFish(String id, String name, double lengthMin, double lengthMax, int modelData,
       List<String> lore, List<String> commands, List<Condition> conditions, Rarity rarity,
-      Set<Biome> biomes, Set<String> regions) {
+      Set<Biome> biomes, Set<String> biomeDescs, Set<String> regions) {
     this.id = id;
     this.name = name;
     this.lengthMin = lengthMin;
@@ -35,5 +36,6 @@ public class CustomFish {
     this.rarity = rarity;
     this.biomes = biomes;
     this.regions = regions;
+    this.biomeDescs = biomeDescs;
   }
 }

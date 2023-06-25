@@ -21,4 +21,9 @@ public class EnchantmentCondition implements Condition {
     return (hand.containsEnchantment(enchantment)
         && hand.getEnchantmentLevel(enchantment) >= level);
   }
+
+  @Override
+  public String getDescription() {
+    return "Needs a certain enchantment";
+  }
 }

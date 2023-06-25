@@ -236,17 +236,14 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
 
     for (int i = 1; i < limit + 1; i++) {
       ContestManager.Record record = contest.getRecord(i);
-
-        if (record == null) {
-            break;
-        }
-
+      if (record == null) {
+        break;
+      }
       String msg = format.replaceAll("%ordinal%", plugin.getOrdinal(i))
           .replaceAll("%number%", Integer.toString(i))
           .replaceAll("%player%", record.getName())
           .replaceAll("%length%", record.getLength() + "")
           .replaceAll("%fish%", record.getFishName());
-
       if (broadcast) {
         plugin.getServer().broadcastMessage(msg);
       } else {
@@ -256,23 +253,20 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
 
     if (broadcast) {
       for (Player player : plugin.getServer().getOnlinePlayers()) {
-        sendPrivateRankingMessage(player);
+        sendCurrentPositionMessage(player);
       }
     } else {
-      if (sender instanceof Player) {
-        Player player = (Player) sender;
-        sendPrivateRankingMessage(player);
+      if (sender instanceof Player player) {
+        sendCurrentPositionMessage(player);
       }
     }
   }
 
-  private void sendPrivateRankingMessage(Player player) {
+  private void sendCurrentPositionMessage(Player player) {
     String msg;
-
     if (plugin.getContestManager().hasRecord(player)) {
       int number = contest.getNumber(player);
       ContestManager.Record record = contest.getRecord(number);
-
       msg = plugin.getFishConfiguration().getString("top-mine")
           .replaceAll("%ordinal%", plugin.getOrdinal(number))
           .replaceAll("%number%", Integer.toString(number))
@@ -282,7 +276,6 @@ public class GeneralCommands implements CommandExecutor, TabCompleter {
     } else {
       msg = plugin.getFishConfiguration().getString("top-mine-no-record");
     }
-
     player.sendMessage(msg);
   }
 }
