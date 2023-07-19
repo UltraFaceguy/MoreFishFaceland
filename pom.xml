@@ -74,7 +74,7 @@
     <dependency>
       <groupId>io.pixeloutlaw</groupId>
       <artifactId>loot</artifactId>
-      <version>1.8.0</version>
+      <version>1.10.1</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

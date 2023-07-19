@@ -1,9 +1,9 @@
 package me.elsiff.morefish.listener;
 
+import com.tealcube.minecraft.bukkit.facecore.utilities.FaceColor;
 import com.tealcube.minecraft.bukkit.facecore.utilities.ItemUtils;
 import com.tealcube.minecraft.bukkit.facecore.utilities.TextUtils;
-import info.faceland.loot.LootPlugin;
-import info.faceland.loot.utils.DropUtil;
+import info.faceland.loot.api.items.CustomItem;
 import info.faceland.loot.utils.MaterialUtil;
 import io.pixeloutlaw.minecraft.spigot.hilt.ItemStackExtensionsKt;
 import java.util.ArrayList;
@@ -11,13 +11,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import land.face.jobbo.util.JobUtil;
 import land.face.learnin.LearninBooksPlugin;
+import land.face.strife.StrifePlugin;
 import land.face.strife.data.champion.LifeSkillType;
 import land.face.strife.events.AutoFishEvent;
+import land.face.strife.stats.StrifeStat;
 import land.face.strife.util.PlayerDataUtil;
 import me.elsiff.morefish.MoreFish;
 import me.elsiff.morefish.event.PlayerCatchCustomFishEvent;
@@ -29,7 +32,6 @@ import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.ShulkerBox;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
@@ -40,7 +42,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerFishEvent.State;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 
 public class FishingListener implements Listener {
@@ -48,8 +49,7 @@ public class FishingListener implements Listener {
   private final MoreFish plugin;
   private final ContestManager contest;
 
-  private final double treasureChance;
-  private final double treasurePerLevel;
+  private final float treasureChance;
   private final int minTreasureGems;
   private final int maxTreasureGems;
   private final int minTreasureTierItems;
@@ -64,11 +64,13 @@ public class FishingListener implements Listener {
 
   private final Random random = new Random();
 
+  private Map<ItemStack, Float> treasureWeightMap = new HashMap<>();
+  private float totalTreasureWeight;
+
   public FishingListener(MoreFish plugin) {
     this.plugin = plugin;
     contest = plugin.getContestManager();
-    treasureChance = plugin.getConfig().getDouble("treasure.chance");
-    treasurePerLevel = plugin.getConfig().getDouble("treasure.chance-per-skill");
+    treasureChance = (float) plugin.getConfig().getDouble("treasure.chance");
     minTreasureGems = plugin.getConfig().getInt("treasure.loot-items.min-gems", 0);
     maxTreasureGems = plugin.getConfig().getInt("treasure.loot-items.max-gems", 2);
     minTreasureTierItems = plugin.getConfig().getInt("treasure.loot-items.min-tier-items", 0);
@@ -85,6 +87,33 @@ public class FishingListener implements Listener {
     for (String item : section.getKeys(false)) {
       System.out.println("loaded" + item + " chance " + section.getDouble(item));
       customItemChances.put(item, section.getDouble(item));
+    }
+
+    ConfigurationSection treasureSection = plugin.getConfig().getConfigurationSection("treasure.treasure-items");
+    for (String treasureKey : treasureSection.getKeys(false)) {
+      float weight = (float) treasureSection.getDouble(treasureKey);
+      if ("REAL-CHEST".equals(treasureKey)) {
+        ItemStack chest = new ItemStack(Material.SHULKER_SHELL);
+        ItemStackExtensionsKt.setDisplayName(chest, FaceColor.RAINBOW + "Treasure Chest");
+        ItemStackExtensionsKt.setCustomModelData(chest, 50);
+        TextUtils.setLore(chest, List.of(
+            FaceColor.GRAY + "A treasure chest! Who knows",
+            FaceColor.GRAY + "what lies within!",
+            FaceColor.WHITE + "[Hold and right-click to open]"
+        ));
+        treasureWeightMap.put(chest, weight);
+        continue;
+      }
+      CustomItem ci = plugin.getLootHooker().getCustomItem(treasureKey);
+      if (ci == null) {
+        Bukkit.getLogger().warning("[MoreFish] Invalid treasure key " + treasureKey);
+      } else {
+        treasureWeightMap.put(ci.toItemStack(1), weight);
+      }
+    }
+    totalTreasureWeight = 0;
+    for (float f : treasureWeightMap.values()) {
+      totalTreasureWeight += f;
     }
   }
 
@@ -233,16 +262,12 @@ public class FishingListener implements Listener {
   }
 
   private void executeFishingActions(Player catcher, PlayerFishEvent event) {
-    if (treasureChance + treasurePerLevel * PlayerDataUtil.getSkillLevels(
-        catcher, LifeSkillType.FISHING, true).getLevelWithBonus() > Math.random()) {
+    float treasureBonus = PlayerDataUtil.getSkillLevels(catcher, LifeSkillType.FISHING, true).getLevel() +
+        StrifePlugin.getInstance().getStrifeMobManager().getStatMob(catcher).getStat(StrifeStat.FISHING_TREASURE);
+    float totalTreasureChance = treasureChance * (1 + (treasureBonus / 100));
+    if (Math.random() < totalTreasureChance) {
       Item caught = (Item) event.getCaught();
       caught.setItemStack(buildTreasure(catcher));
-      String msg = TextUtils.color(
-          "&6&lD&e&la&6&ln&e&lg &6&lS&e&lo&6&ln&e&l!&6&l! &f" + catcher.getName()
-              + " &7caught a &6Treasure Chest&7!");
-      for (Player p : Bukkit.getOnlinePlayers()) {
-        p.sendMessage(msg);
-      }
       JobUtil.bumpTaskProgress(event.getPlayer(), "FISH", "mf_fish", "INTERNAL_TREASURE");
       return;
     }
@@ -339,33 +364,20 @@ public class FishingListener implements Listener {
   }
 
   private ItemStack buildTreasure(Player player) {
-    ItemStack item = new ItemStack(Material.BLACK_SHULKER_BOX);
-    if (item.getItemMeta() instanceof BlockStateMeta) {
-      BlockStateMeta im = (BlockStateMeta) item.getItemMeta();
-      if (im.getBlockState() instanceof ShulkerBox) {
-        ShulkerBox shulker = (ShulkerBox) im.getBlockState();
-
-        ItemStack[] stacks = new ItemStack[27];
-        Set<Integer> freeSlots = getFreeSpace(stacks);
-        for (ItemStack stack : getLootItems(player)) {
-          if (freeSlots.isEmpty()) {
-            break;
-          }
-          int slot = new Random().nextInt(freeSlots.size());
-          stacks[slot] = stack;
-          freeSlots.remove(slot);
+    if (true == true) {
+      float maxWeight = (float) (Math.random() * totalTreasureWeight);
+      float currentWeight = 0;
+      for (Entry<ItemStack, Float> entry : treasureWeightMap.entrySet()) {
+        currentWeight += entry.getValue();
+        if (currentWeight >= maxWeight) {
+          return entry.getKey().clone();
         }
-        shulker.getInventory().setContents(stacks);
-        im.setBlockState(shulker);
-        item.setItemMeta(im);
       }
     }
-    ItemStackExtensionsKt.setDisplayName(item, ChatColor.GOLD + "Treasure Chest");
-    ItemStackExtensionsKt.setCustomModelData(item, 1337);
-    return item;
+    return null;
   }
 
-  private List<ItemStack> getLootItems(Player player) {
+  public List<ItemStack> getLootItems(Player player) {
     List<ItemStack> items = new ArrayList<>();
     items.addAll(plugin.getLootHooker().getGems(minTreasureGems +
         random.nextInt(maxTreasureGems - minTreasureGems + 1)));
@@ -374,15 +386,5 @@ public class FishingListener implements Listener {
         tierRarityBonus));
     items.addAll(plugin.getLootHooker().getCustomItems(customItemChances));
     return items;
-  }
-
-  private Set<Integer> getFreeSpace(ItemStack[] slots) {
-    Set<Integer> openSlots = new HashSet<>();
-    for (int i = 0; i < slots.length; i++) {
-      if (slots[i] == null || slots[i].getType() == Material.AIR) {
-        openSlots.add(i);
-      }
-    }
-    return openSlots;
   }
 }

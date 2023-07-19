@@ -35,6 +35,8 @@ public class MoreFish extends JavaPlugin {
   private FishConfiguration fishConfiguration;
   private FishManager fishManager;
   private ContestManager contestManager;
+  @Getter
+  private FishingListener fishingListener;
   private UpdateChecker updateChecker;
 
   private VaultHooker vaultHooker;
@@ -70,45 +72,42 @@ public class MoreFish extends JavaPlugin {
     getCommand("morefish").setExecutor(new GeneralCommands(this));
 
     manager = getServer().getPluginManager();
-    manager.registerEvents(new FishingListener(this), this);
-    manager.registerEvents(new PlayerListener(this), this);
-    manager.registerEvents(new TreasureListener(), this);
-
     if (manager.getPlugin("Vault") != null && manager.getPlugin("Vault").isEnabled()) {
       vaultHooker = new VaultHooker(this);
-
       if (vaultHooker.setupEconomy()) {
         getLogger().info("Found Vault for economy support.");
       } else {
         vaultHooker = null;
       }
     }
+    if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI")
+        .isEnabled()) {
+      placeholderAPIHooker = new PlaceholderAPIHooker(this);
+      getLogger().info("Found PlaceholderAPI for placeholders support.");
+    }
+    if (manager.getPlugin("WorldGuard") != null && manager.getPlugin("WorldGuard").isEnabled()) {
+      worldGuardHooker = new WorldGuardHooker();
+      getLogger().info("Found WorldGuard for regions support.");
+    }
+    if (manager.getPlugin("Strife") != null && manager.getPlugin("Strife").isEnabled()) {
+      strifeHooker = new StrifeHooker((StrifePlugin) manager.getPlugin("Strife"));
+      getLogger().info("Found Strife for fishXP support.");
+    }
+    if (manager.getPlugin("Loot") != null && manager.getPlugin("Loot").isEnabled()) {
+      lootHooker = new LootHooker();
+      getLogger().info("Found Loot for treasure support.");
+    }
+
+    fishingListener = new FishingListener(this);
+    manager.registerEvents(fishingListener, this);
+    manager.registerEvents(new PlayerListener(this), this);
+    manager.registerEvents(new TreasureListener(this), this);
 
     Plugin pickupPlugin = Bukkit.getServer().getPluginManager().getPlugin("TogglePickups");
     if (pickupPlugin != null) {
       togglePickupsPlugin = (TogglePickupsPlugin) pickupPlugin;
     }
 
-    if (manager.getPlugin("PlaceholderAPI") != null && manager.getPlugin("PlaceholderAPI")
-        .isEnabled()) {
-      placeholderAPIHooker = new PlaceholderAPIHooker(this);
-      getLogger().info("Found PlaceholderAPI for placeholders support.");
-    }
-
-    if (manager.getPlugin("WorldGuard") != null && manager.getPlugin("WorldGuard").isEnabled()) {
-      worldGuardHooker = new WorldGuardHooker();
-      getLogger().info("Found WorldGuard for regions support.");
-    }
-
-    if (manager.getPlugin("Strife") != null && manager.getPlugin("Strife").isEnabled()) {
-      strifeHooker = new StrifeHooker((StrifePlugin) manager.getPlugin("Strife"));
-      getLogger().info("Found Strife for fishXP support.");
-    }
-
-    if (manager.getPlugin("Loot") != null && manager.getPlugin("Loot").isEnabled()) {
-      lootHooker = new LootHooker();
-      getLogger().info("Found Loot for treasure support.");
-    }
     scheduleAutoRunning();
     getLogger().info("Plugin has been enabled!");
   }

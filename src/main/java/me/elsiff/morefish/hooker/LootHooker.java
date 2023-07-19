@@ -29,7 +29,7 @@ public class LootHooker {
     while (amount > 0) {
       items.add(LootPlugin.getInstance().getNewItemBuilder()
           .withTier(LootPlugin.getInstance().getTierManager().getRandomTier())
-          .withRarity(LootPlugin.getInstance().getRarityManager().getRandomRarityWithBonus(bonus))
+          .withRarity(LootPlugin.getInstance().getRarityManager().getRandomRarity(bonus, 1))
           .withLevel(Math.max(1, Math.min(level - 2 + random.nextInt(5), 100)))
           .withItemGenerationReason(ItemGenerationReason.EXTERNAL)
           .withSpecialStat(false)
@@ -53,5 +53,9 @@ public class LootHooker {
       }
     }
     return items;
+  }
+
+  public CustomItem getCustomItem(String id) {
+    return LootPlugin.getInstance().getCustomItemManager().getCustomItem(id);
   }
 }
